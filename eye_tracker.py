@@ -44,6 +44,7 @@ def detect_gaze_upgraded(frame, eye_cascade):
 
     _, threshold = cv2.threshold(eye_blur, 70, 255, cv2.THRESH_BINARY_INV)
     cv2.imshow('Eye', threshold)
+    print('ok')
     contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if not contours:
@@ -52,7 +53,7 @@ def detect_gaze_upgraded(frame, eye_cascade):
     largest = max(contours, key=cv2.contourArea)
     moments = cv2.moments(largest)
 
-    if moments['m00'] != 0:
+    if moments['m00'] != 0: 
         pupil_in_eye_x = moments['m10'] / moments['m00']
         pupil_in_eye_y = moments['m01'] / moments['m00']
     else:

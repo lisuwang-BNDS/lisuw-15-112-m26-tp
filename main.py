@@ -1,3 +1,7 @@
+#other complexity in the leve itself (feature, plaftform / physics)
+#backgtound
+#handtracking mediapipe()
+
 import multiprocessing as mp
 import queue
 import threading
@@ -5,7 +9,88 @@ from cmu_graphics import *
 import eye_tracker
 
 Samplesize_need = 20
+import random
 
+
+class IntroLogo:
+    def __init__(self):
+        self.time = 0              
+        self.opacity = 0            
+        self.opacity_for_text = 0   
+        self.glitching = False
+        self.glitch_time = 0
+        self.flashingx = 0
+        self.flashingy = 0
+        self.glitch_slices = []     
+
+    def change(self, app):
+        self.time += 1
+        if self.opacity < 100: #TypeError: Label.opacity should be number-in-range-0-100 (but 100.80000000000015 is of type float)
+            self.opacity = min(100,(self.opacity + 0.7))
+        if self.opacity > 60 and self.opacity_for_text < 100:
+            self.opacity_for_text = min(100,(self.opacity_for_text + 1.3))
+        if not self.glitching and random.random() < 0.07 or self.time < 30:
+            self.glitching = True
+            self.glitch_time = random.randint(2, 5)  
+
+        if self.glitching:
+            self.glitch_time -= 1
+            self.flashingx = random.randint(-8, 8)
+            self.flashingy = random.randint(-3, 3)
+            self.glitch_slices = []
+            for i in range(random.randint(1, 4)):
+                y = random.randint(app.height // 2 - 80, app.height // 2 + 80)
+                h = random.randint(3, 18)
+                dx = random.randint(-30, 30)
+                self.glitch_slices.append((y, h, dx))
+            if self.glitch_time <= 0:
+                self.glitching = False
+                self.flashingx = 0
+                self.flashingy = 0
+                self.glitch_slices = []
+        if self.time > 420:
+            app.state = 'menu'
+            app.intro_sound.pause()
+
+    def jump(self, app, key):
+        if key in ['space', 'enter']:
+            app.state = 'menu'
+            app.intro_sound.pause()
+    
+
+    def draw(self, app):
+        drawRect(0, 0, app.width, app.height, fill='black')
+        cx = app.width / 2
+        cy = app.height / 2 - 30
+        if self.opacity > 0:
+            text = "E N V I S I O N"
+            if self.glitching:
+                drawLabel(text, cx + self.flashingx - 6, cy + self.flashingy - 2, fill='magenta', size=64, bold=True, font='monospace', opacity=self.opacity * 0.75)
+                drawLabel(text, cx + self.flashingx + 6, cy + self.flashingy + 2, fill='cyan', size=64, bold=True, font='monospace', opacity=self.opacity * 0.75)
+            if self.glitching and random.random() < 0.4:
+                color = 'cyan' 
+            else:
+                color = 'white'
+            drawLabel(text, cx + self.flashingx, cy + self.flashingy, fill=color, size=64, bold=True, font='monospace', opacity=self.opacity)
+            if self.glitching:
+                for y, h, dx in self.glitch_slices:
+                    slice_color = random.choice(['cyan', 'magenta', 'black', 'white'])
+                    drawRect(cx - 350 + dx, y, 700, h, fill=slice_color, opacity=80)
+
+    
+        if self.opacity_for_text > 0:
+        
+            w = 360 * (self.opacity_for_text / 100)
+            drawLine(cx - w/2, cy + 55, cx + w/2, cy + 55, fill='cyan', opacity=self.opacity_for_text)
+            drawLabel("ASSISTIVE EYE-TRACKING ADVENTURE FOR 112 PROJECT", cx, cy + 85, fill='magenta', size=13, bold=True, font='monospace', opacity=self.opacity_for_text)
+
+        if self.time > 40:
+       
+            pulse_opacity = 30 + int(40 * ((self.time % 30) / 30.0))
+            drawLabel("[ PRESS SPACE TO START ]", cx, app.height - 70, fill='gray', size=12, font='monospace', opacity=pulse_opacity)
+
+
+    
 class Character:
     def __init__(self,x,y):
         self.x = x
@@ -132,7 +217,13 @@ def onAppStart(app):
     app.camera_status = 'starting'
     app.camera_message = 'camera'
 
-    app.state = 'menu' #calibration
+    app.state = 'calibration' #calibration,menu
+    url_intro = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/Future Noir.mp3'
+    app.intro_sound = Sound(url_intro)
+    print(app.intro_sound)
+    app.intro_sound.play(loop = True)
+    app.intro = IntroLogo()
+
 
     url_menu_walking = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/walking_menu.ogg'
     app.menu_walking_sound = Sound(url_menu_walking)
@@ -174,7 +265,7 @@ def onAppStart(app):
     app.calib_index = 0
     app.stable_samples = []
     app.calib_raw_results = {}
-
+    #mp
     app.camera_queue = mp.Queue(maxsize=20)
     app.camera_stop_event = mp.Event()
     app.camera_process = mp.Process(
@@ -193,7 +284,10 @@ def onStep(app):
         current_vx = app.raw_vx
         current_vy = app.raw_vy
 
-    if app.state == 'calibration':
+    if app.state == 'intro':
+        app.intro.change(app)
+
+    elif app.state == 'calibration':
         if app.recording_data and current_vx is not None and current_vy is not None:
             app.stable_samples.append((current_vx, current_vy))
 
@@ -214,6 +308,10 @@ def onStep(app):
 
 
 def onKeyPress(app, key):
+    if app.state == 'intro':
+        app.intro.jump(app, key)
+
+
     if app.state != 'calibration':
         return
 
@@ -224,7 +322,7 @@ def onKeyPress(app, key):
             print("Recording")
 
 def onKeyHold(app,keys):
-    
+    print(app.state)
     if app.state == 'menu':
         app.menu_walking_sound.play()
         x = app.character.x 
@@ -273,7 +371,10 @@ def onMousePress(app, mouseX, mouseY):
 
 
 def redrawAll(app):
-    if app.state == 'menu':
+    if app.state == 'intro':
+        app.intro.draw(app)
+
+    elif app.state == 'menu':
         imageWidth, imageHeight = getImageSize(app.url)
         imageWidth, imageHeight = getImageSize(app.url)
         drawImage(app.url, app.width/2, app.height/2, align='center',width=imageWidth,height=imageHeight)
@@ -285,7 +386,7 @@ def redrawAll(app):
         drawCircle(app.character.x, app.character.y, 10, fill = 'red')
 
 
-    if app.state == 'calibration':
+    elif app.state == 'calibration':
         drawRect(0, 0, app.width, app.height, fill='aliceBlue')
 
         if app.calib_index < len(app.calib_order):
