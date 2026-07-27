@@ -14,29 +14,95 @@
 # diamond square
 import io
 import time
-import queue
-
-import threading
-import multiprocessing as mp
+import os
 from PIL import Image
 from cmu_graphics import *
 import random
 import eye_tracker
-import manager_eyeVsHand   
+from vision_tracker import VisionTrackerThread, VisionData
 
 Samplesize_need = 20
 
 
+
+class RandomParallaxBackground:
+    def __init__(self, layer1_path, layer2_pool, layer3_pool, layer4_pool, width, height):
+        self.width = width
+        self.height = height
+        self.layer1_path = layer1_path
+        self.speed1 = 0.15
+        self.offset1 = 0.0
+        self.layer2_pool = layer2_pool 
+        self.speed2 = 0.45
+        self.offset2 = 0.0
+        self.layer2_curr = random.choice(self.layer2_pool)
+        self.layer2_next = random.choice(self.layer2_pool)
+        self.layer3_pool = layer3_pool  
+        self.speed3 = 0.85
+        self.offset3 = 0.0
+        self.layer3_curr = random.choice(self.layer3_pool)
+        self.layer3_next = random.choice(self.layer3_pool)
+        self.layer4_pool = layer4_pool
+        self.speed4 = 1.0
+        self.offset4 =0.0
+        self.layer4_curr = random.choice(self.layer4_pool)
+        self.layer4_next = random.choice(self.layer4_pool)
+        
+
+    def update(self):
+        self.offset1 = (self.offset1 + 6 * self.speed1) % self.width
+
+        self.offset2 += 6 * self.speed2
+        if self.offset2 >= self.width:
+            self.offset2 %= self.width  
+            self.layer2_curr = self.layer2_next  
+            self.layer2_next = random.choice(self.layer2_pool) 
+
+        self.offset3 += 6 * self.speed3
+        if self.offset3 >= self.width:
+            self.offset3 %= self.width
+            self.layer3_curr = self.layer3_next
+            self.layer3_next = random.choice(self.layer3_pool)
+
+        self.offset4 += 6 * self.speed4
+        if self.offset4 >= self.width:
+            self.offset4 %= self.width
+            self.layer4_curr = self.layer4_next
+            self.layer4_next = random.choice(self.layer4_pool)
+
+    def draw(self, app):
+    
+        x1_l1 = (self.width / 2) - self.offset1
+        x2_l1 = x1_l1 + self.width - 1  
+        drawImage(self.layer1_path, x1_l1, self.height / 2, align='center', width=self.width, height=self.height)
+        drawImage(self.layer1_path, x2_l1, self.height / 2, align='center', width=self.width, height=self.height)
+
+        x1_l2 = (self.width / 2) - self.offset2
+        x2_l2 = x1_l2 + self.width - 1
+        drawImage(self.layer2_curr, x1_l2, self.height / 2, align='center', width=self.width, height=self.height)
+        drawImage(self.layer2_next, x2_l2, self.height / 2, align='center', width=self.width, height=self.height)
+
+        x1_l3 = (self.width / 2) - self.offset3
+        x2_l3 = x1_l3 + self.width - 1
+        drawImage(self.layer3_curr, x1_l3, self.height / 2, align='center', width=self.width, height=self.height)
+        drawImage(self.layer3_next, x2_l3, self.height / 2, align='center', width=self.width, height=self.height)
+
+        x1_l4 = (self.width / 2) - self.offset4
+        x2_l4 = x1_l4 + self.width - 1
+        drawImage(self.layer4_curr, x1_l4, self.height / 2, align='center', width=self.width, height=self.height)
+        drawImage(self.layer4_next, x2_l4, self.height / 2, align='center', width=self.width, height=self.height)
+
+
 class IntroLogo:
     def __init__(self):
-        self.time = 0              
-        self.opacity = 0            
-        self.opacity_for_text = 0   
+        self.time = 0
+        self.opacity = 0
+        self.opacity_for_text = 0
         self.glitching = False
         self.glitch_time = 0
         self.flashingx = 0
         self.flashingy = 0
-        self.glitch_slices = []     
+        self.glitch_slices = []
 
     def change(self, app):
         self.time += 1
@@ -46,7 +112,7 @@ class IntroLogo:
             self.opacity_for_text = min(100, (self.opacity_for_text + 1.3))
         if not self.glitching and random.random() < 0.07 or self.time < 30:
             self.glitching = True
-            self.glitch_time = random.randint(2, 5)  
+            self.glitch_time = random.randint(2, 5)
 
         if self.glitching:
             self.glitch_time -= 1
@@ -65,12 +131,14 @@ class IntroLogo:
                 self.glitch_slices = []
         if self.time > 420:
             app.state = 'menu'
-            app.intro_sound.pause()
+            if hasattr(app, 'intro_sound'):
+                app.intro_sound.pause()
 
     def jump(self, app, key):
         if key in ['space', 'enter']:
             app.state = 'menu'
-            app.intro_sound.pause()
+            if hasattr(app, 'intro_sound'):
+                app.intro_sound.pause()
 
     def draw(self, app):
         drawRect(0, 0, app.width, app.height, fill='black')
@@ -81,10 +149,7 @@ class IntroLogo:
             if self.glitching:
                 drawLabel(text, cx + self.flashingx - 6, cy + self.flashingy - 2, fill='magenta', size=64, bold=True, font='monospace', opacity=self.opacity * 0.75)
                 drawLabel(text, cx + self.flashingx + 6, cy + self.flashingy + 2, fill='cyan', size=64, bold=True, font='monospace', opacity=self.opacity * 0.75)
-            if self.glitching and random.random() < 0.4:
-                color = 'cyan' 
-            else:
-                color = 'white'
+            color = 'cyan' if self.glitching and random.random() < 0.4 else 'white'
             drawLabel(text, cx + self.flashingx, cy + self.flashingy, fill=color, size=64, bold=True, font='monospace', opacity=self.opacity)
             if self.glitching:
                 for y, h, dx in self.glitch_slices:
@@ -102,7 +167,7 @@ class IntroLogo:
             drawLabel("[ PRESS SPACE TO START ]", cx, app.height - 70, fill='gray', size=12, font='monospace', opacity=pulse_opacity)
 
 
-class Character:
+class Character: #this is the character for the starting page menu
     def __init__(self, x, y):
         self.x = x
         self.y = y
@@ -110,6 +175,48 @@ class Character:
     def move(self, dx, dy):
         self.x += dx
         self.y += dy
+
+class Player:
+    def __init__(self,x,y,width = 40, height = 80):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.vy = 0.0
+        self.g = 0.95 # gravitational a, since on graphics + means down
+        self.jump_power = -10
+        self.is_grounded = False
+        self.ground_y = 900
+        self.state = 'run' #for future animation and so ( run jump fall dash slide...)
+
+    def jump(self):
+        if self.is_grounded:
+            self.vy = self.jump_power
+            self.is_grounded = False
+            self.state = 'jump'
+    def update(self, current_ground = 900):
+        self.ground_y = current_ground
+        self.vy += self.g
+        self.y += self.vy
+        feet_y = self.y + self.height
+        if feet_y >= self.ground_y:
+            self.y = self.ground_y - self.height
+            self.vy = 0
+            self.is_grounded = True
+            self.state = 'run'
+        else:
+            self.is_grounded = False
+            if self.vy > 0:
+                self.state = 'fall'
+
+    def draw(self,app): #make it to sprites later on
+        drawRect(self.x, self.y,self.width,self.height, fill='cyan')
+        eye_y = self.y + 15
+        drawCircle(self.x + self.width-10, eye_y, 4 , fill = 'red')
+        if self.is_grounded:
+            drawOval(self.x + self.width / 2, self.ground_y, self.width + 10, 8, fill='darkCyan', opacity=40)
+
+
 
 
 class menu_triggerer:
@@ -122,9 +229,7 @@ class menu_triggerer:
     def collide(self, other):
         if not isinstance(other, Character):
             return False
-        if self.left <= other.x <= (self.left + self.w) and self.top <= other.y <= (self.top + self.h):
-            return True
-        return False
+        return self.left <= other.x <= (self.left + self.w) and self.top <= other.y <= (self.top + self.h)
 
     def near(self, other, margin=30):
         if not isinstance(other, Character):
@@ -153,10 +258,7 @@ class DemoTarget:
             if mode == 0:
                 self.progress = min(1.0, self.progress + 0.04)
             else:
-                if is_pinching:
-                    self.progress = 1.0
-                else:
-                    self.progress = min(0.8, self.progress + 0.05)
+                self.progress = 1.0 if is_pinching else min(0.8, self.progress + 0.05)
 
             if self.progress >= 1.0 and not self.activated:
                 self.activated = True
@@ -172,6 +274,7 @@ class DemoTarget:
 
 
 def get_gazerecorder_style_pointer(app, current_vx, current_vy):
+    
     if not app.calib_raw_results:
         return app.width // 2, app.height // 2
 
@@ -183,7 +286,6 @@ def get_gazerecorder_style_pointer(app, current_vx, current_vy):
         screen_pos = app.calib_targets[target_id]
 
         dist = ((current_vx - calib_vx) ** 2 + (current_vy - calib_vy) ** 2) ** 0.5
-
         if dist < 0.03:
             return screen_pos[0], screen_pos[1]
 
@@ -192,7 +294,7 @@ def get_gazerecorder_style_pointer(app, current_vx, current_vy):
         screenX += screen_pos[0] * weight
         screenY += screen_pos[1] * weight
 
-    if GrandWeight == 0: 
+    if GrandWeight == 0:
         return app.width // 2, app.height // 2
 
     return int(screenX / GrandWeight), int(screenY / GrandWeight)
@@ -214,64 +316,53 @@ def _finish_current_point_capture(app):
 
     if app.calib_index >= len(app.calib_order):
         app.state = 'demo'
-        app.camera_message = 'Complete!'
     else:
         app.camera_message = 'Look at next point and press space.'
 
-
-def _camera_queue_listener(app):
-    while not getattr(app, 'stop_event', None).is_set():
-        try:
-            while not app.camera_queue.empty():
-                payload = app.camera_queue.get_nowait()
-                if not payload: 
-                    continue
-
-                kind = payload[0]
-                with app.lock:
-                    if kind in ('eye', 'point'):
-                        _, vx, vy = payload
-                        app.raw_vx, app.raw_vy = vx, vy
-                        app.camera_status = 'tracking' if vx is not None else 'lost'
-                    elif kind == 'hand':
-                        _, hx, hy, gesture = payload
-                        app.hand_x, app.hand_y, app.hand_gesture = hx, hy, gesture
-                    elif kind == 'frame':
-                        _, frame_bytes = payload
-                        app.latest_frame_bytes = frame_bytes
-                    elif kind == 'error':
-                        app.raw_vx, app.raw_vy = None, None
-                        app.camera_status = 'error'
-            time.sleep(0.01)
-        except Exception:
-            time.sleep(0.01)
-
+def get_image_files(folder_path):
+    if not os.path.exists(folder_path):
+        return []
+    valid_exts = ('.png', '.jpg', '.jpeg')
+    files = []
+    for f in os.listdir(folder_path):
+        if f.startswith('.'):
+            continue
+        if f.lower().endswith(valid_exts):
+            files.append(os.path.join(folder_path, f))
+    return sorted(files)
 
 def onAppStart(app):
     app.width = 1500
     app.height = 1000
     app.stepsPerSecond = 50
-    app.stop_event = mp.Event()
-    app.lock = threading.Lock()
+    app.is_running = True
+    app.fenced = False
+    app.msg_need_ca = None
+    app.player = Player(x=200, y=730, width=40, height=70)
 
-    app.raw_vx, app.raw_vy = None, None
+    app.vision = VisionData()
+    app.camera_mode = 0  # 0: Eye, 1: Hand
+
     app.gaze_x, app.gaze_y = None, None
 
-    app.hand_x, app.hand_y = None, None
-    app.hand_gesture = 'NONE'
-
-    app.latest_frame_bytes = None
-    app.camera_cmu_image = None
-    app.step_counter = 0
+    app.mouse_x, app.mouse_y = app.width // 2, app.height // 2
+    app.mouse_pressed = False
 
     app.state = 'intro'
-    url_intro = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/Future Noir.mp3'
-    app.intro_sound = Sound(url_intro)
-    app.intro_sound.play(loop=True)
+    try:
+        url_intro = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/Future Noir.mp3'
+        app.intro_sound = Sound(url_intro)
+        app.intro_sound.play(loop=True)
+    except Exception:
+        pass
+
     app.intro = IntroLogo()
 
-    url_menu_walking = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/walking_menu.ogg'
-    app.menu_walking_sound = Sound(url_menu_walking)
+    try:
+        url_menu_walking = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/walking_menu.ogg'
+        app.menu_walking_sound = Sound(url_menu_walking)
+    except Exception:
+        pass
 
     app.leftest_top_building = menu_triggerer(8, 8, 236, 418)
     app.hangin_neonlight = menu_triggerer(254, 50, 42, 185)
@@ -294,17 +385,16 @@ def onAppStart(app):
         app.middle_upper_building, app.rightest_upper_building, app.corridor_between_upper,
         app.right_light, app.left_light, app.trash_can, app.alarm_sign, app.monitor_camera
     ]
-
     app.character = Character(830, 600)
     app.url = '/Users/lisuwang/untitled folder/112Projec/assets/images/Menu page/Menu page 1.png'
 
-    app.demo_score = 0
+    
     app.demo_targets = [
-        DemoTarget(350, 300, 50, "ALPHA"),
-        DemoTarget(1150, 300, 50, "BETA"),
-        DemoTarget(450, 700, 50, "GAMMA"),
-        DemoTarget(1050, 700, 50, "DELTA"),
-        DemoTarget(750, 500, 60, "CORE")
+        DemoTarget(350, 300, 50, "15"),
+        DemoTarget(1150, 300, 50, "112"),
+        DemoTarget(450, 700, 50, "ENVISION"),
+        DemoTarget(1050, 700, 50, "15"),
+        DemoTarget(750, 500, 60, "112")
     ]
 
     app.calib_targets = {
@@ -318,72 +408,82 @@ def onAppStart(app):
     app.stable_samples = []
     app.calib_raw_results = {}
 
-    app.camera_queue = mp.Queue(maxsize=10)
-    app.camera_mode = mp.Value('i', 0)
+  
+    base_bg_dir = '/Users/lisuwang/untitled folder/112Projec/assets/images/self_categoried_background/'
 
-    app.vision_process = mp.Process(
-        target=manager_eyeVsHand.run_unified_camera_process,
-        args=(app.camera_queue, app.camera_mode, app.stop_event, app.width, app.height),
-        daemon=True
-    )
-    app.vision_process.start()
+    
+    layer1_files = get_image_files(os.path.join(base_bg_dir, 'layer1_far'))
+    layer2_files = get_image_files(os.path.join(base_bg_dir, 'layer2_mid'))
+    layer3_files = get_image_files(os.path.join(base_bg_dir, 'layer3_near'))
+    layer4_files = get_image_files(os.path.join(base_bg_dir, 'layer4_nearest'))
 
-    app.queue_thread = threading.Thread(target=_camera_queue_listener, args=(app,), daemon=True)
-    app.queue_thread.start()
+    l1_path = layer1_files[0] 
+    l2_pool = layer2_files 
+    l3_pool = layer3_files 
+    l4_pool = layer4_files
+
+    app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
+    app.game_speed = 8
+    app.vision_thread = VisionTrackerThread(app)
+    app.vision_thread.start()
 
 
 def onStep(app):
-    # app.step_counter += 1
-    # if app.step_counter % 3 == 0:
-    #     with app.lock:
-    #         if app.latest_frame_bytes is not None:
-    #             try:
-    #                 pil_img = Image.open(io.BytesIO(app.latest_frame_bytes))
-    #                 app.camera_cmu_image = CMUImage(pil_img)
-    #                 app.latest_frame_bytes = None
-    #             except Exception:
-    #                 pass
-
     if app.state == 'intro':
         app.intro.change(app)
 
     elif app.state == 'calibration':
-        with app.lock:
-            current_vx = app.raw_vx
-            current_vy = app.raw_vy
-
-        if app.recording_data and current_vx is not None and current_vy is not None:
-            app.stable_samples.append((current_vx, current_vy))
+        if app.recording_data and app.vision.raw_vx is not None and app.vision.raw_vy is not None:
+            app.stable_samples.append((app.vision.raw_vx, app.vision.raw_vy))
             if len(app.stable_samples) >= Samplesize_need:
                 _finish_current_point_capture(app)
 
-    elif app.state in ('demo', 'game'):
-        if app.camera_mode.value == 0:
-            with app.lock:
-                current_vx = app.raw_vx
-                current_vy = app.raw_vy
-            if current_vx is not None and current_vy is not None:
-                cx, cy = get_gazerecorder_style_pointer(app, current_vx, current_vy)
+    elif app.state in ('demo', 'game') : 
+        if app.state == 'game':
+            app.bg.update()
+            app.player.update(current_ground=900)
+            if app.camera_mode == 1 and app.vision.hand_gesture == 'PINCH':
+                app.player.jump()
+
+        
+        if app.camera_mode == 0:
+            if app.vision.raw_vx is not None and app.vision.raw_vy is not None:
+                cx, cy = get_gazerecorder_style_pointer(app, app.vision.raw_vx, app.vision.raw_vy)
                 if app.gaze_x is None:
                     app.gaze_x, app.gaze_y = cx, cy
                 else:
                     app.gaze_x = int(app.gaze_x + 0.25 * (cx - app.gaze_x))
                     app.gaze_y = int(app.gaze_y + 0.25 * (cy - app.gaze_y))
             else:
-                app.gaze_x, app.gaze_y = None, None
-            
+                app.gaze_x, app.gaze_y = app.mouse_x, app.mouse_y
+
             cursor_x, cursor_y = app.gaze_x, app.gaze_y
-            is_pinching = False
+            is_pinching = app.mouse_pressed
+
+        
         else:
-            cursor_x, cursor_y = app.hand_x, app.hand_y
-            is_pinching = (app.hand_gesture == 'PINCH')
+            if app.vision.hand_x is not None and app.vision.hand_y is not None:
+                cursor_x, cursor_y = app.vision.hand_x, app.vision.hand_y
+                is_pinching = (app.vision.hand_gesture == 'PINCH')
+            else:
+                cursor_x, cursor_y = app.mouse_x, app.mouse_y
+                is_pinching = app.mouse_pressed
 
         for target in app.demo_targets:
             if target.flash_timer > 0:
                 target.flash_timer -= 1
-            triggered = target.check_hover(cursor_x, cursor_y, is_pinching, app.camera_mode.value)
-            if triggered:
-                app.demo_score += 100
+            
+
+def onMouseMove(app, mouseX, mouseY):
+    app.mouse_x, app.mouse_y = mouseX, mouseY
+
+
+def onMousePress(app, mouseX, mouseY):
+    app.mouse_pressed = True
+
+
+def onMouseRelease(app, mouseX, mouseY):
+    app.mouse_pressed = False
 
 
 def onKeyPress(app, key):
@@ -392,10 +492,7 @@ def onKeyPress(app, key):
 
     elif app.state == 'menu':
         if key == 'space' and app.rightest_bottom_building.near(app.character):
-            if app.camera_mode.value == 0:
-                app.camera_mode.value = 1  
-            else:
-                app.camera_mode.value = 0  
+            app.camera_mode = 1 - app.camera_mode
 
     elif app.state == 'calibration':
         if key in ['space', 'enter']:
@@ -407,7 +504,11 @@ def onKeyPress(app, key):
         if key in ['b', 'escape']:
             app.state = 'menu'
         elif key == 'space':
-            app.camera_mode.value = 1 - app.camera_mode.value
+            
+            if app.state == 'game':
+                app.player.jump()
+            app.camera_mode = 1 - app.camera_mode
+            
 
 
 def onKeyHold(app, keys):
@@ -425,14 +526,23 @@ def onKeyHold(app, keys):
             for v in app.triggers_menu:
                 if v.collide(app.character):
                     if v == app.fence:
-                        if app.camera_mode.value == 0:
+                        app.fenced = True
+                        if app.camera_mode == 0 and app.vision.camera_available:
                             app.state = 'calibration'
                             app.calib_index = 0
                             app.stable_samples = []
                             app.calib_raw_results = {}
                         else:
                             app.state = 'demo'
-                    else: 
+                    if v == app.middle_upper_building:
+                        if not app.fenced:
+                            app.msg_need_ca = 'please go to the fence to finish the lab'
+                        else:
+                            app.state = 'game'
+
+
+                    else:
+
                         app.character.x, app.character.y = x, y
 
 
@@ -444,10 +554,13 @@ def redrawAll(app):
         imageWidth, imageHeight = getImageSize(app.url)
         drawImage(app.url, app.width/2, app.height/2, align='center', width=imageWidth, height=imageHeight)
         drawCircle(app.character.x, app.character.y, 10, fill='red')
+        if app.msg_need_ca != None:
+            drawLabel(app.msg_need_ca, app.width//2, 30, fill= 'yellow', bold = True)
+        
 
         if app.rightest_bottom_building.near(app.character):
-            curr_mode = "EYE" if app.camera_mode.value == 0 else "HAND"
-            next_mode = "HAND" if app.camera_mode.value == 0 else "EYE"
+            curr_mode = "EYE" if app.camera_mode == 0 else "HAND"
+            next_mode = "HAND" if app.camera_mode == 0 else "EYE"
             drawRect(app.width // 2 - 220, 30, 440, 40, fill='black', opacity=80, align='center')
             drawLabel(f"Mode: {curr_mode} | Press [ SPACE ] to switch to {next_mode}", app.width // 2, 30, fill='yellow', size=15, bold=True)
 
@@ -463,8 +576,7 @@ def redrawAll(app):
 
             progress = min(len(app.stable_samples), Samplesize_need) / Samplesize_need
             drawRect(app.width // 2 - 120, app.height - 90, 240, 14, fill=None, border='gray')
-            
-            # 👈 修复点：加入 progress_w > 1 尺寸保护，防止宽度为 0 报错
+
             progress_w = 240 * progress
             if progress_w > 1:
                 bar_color = 'limeGreen' if app.recording_data else 'lightGray'
@@ -477,9 +589,9 @@ def redrawAll(app):
 
             drawLabel(msg, app.width // 2, app.height - 50, size=18, bold=True, align='center')
 
-    elif app.state in ('demo', 'game'):
+    elif app.state == 'demo':
         drawRect(0, 0, app.width, app.height, fill='black')
-        
+
         for gx in range(0, app.width, 100):
             drawLine(gx, 0, gx, app.height, fill='darkSlateGray', opacity=30)
         for gy in range(0, app.height, 100):
@@ -488,70 +600,51 @@ def redrawAll(app):
         drawRect(0, 0, app.width, 70, fill='black', opacity=80)
         drawLine(0, 70, app.width, 70, fill='cyan')
 
-        mode_title = "EYE-TRACKING LAB (CALIBRATED)" if app.camera_mode.value == 0 else "HAND-GESTURE LAB"
-        drawLabel(f"SYSTEM DEMO // {mode_title}", 40, 25, fill='cyan', size=20, bold=True, align='left')
-        
-        hint_str = "Look at targets to charge" if app.camera_mode.value == 0 else "Move hand & Pinch to trigger"
+        mode_title = "EYE-TRACKING LAB" if app.camera_mode == 0 else "HAND-GESTURE LAB"
+        drawLabel(f"DEMO // {mode_title}", 40, 25, fill='cyan', size=20, bold=True, align='left')
+
+        hint_str = "Look at targets (or Mouse) to charge" if app.camera_mode == 0 else "Move hand (or Mouse) & Pinch/Click to trigger"
         drawLabel(f"Objective: {hint_str} | Press [ SPACE ] Switch Mode | Press [ B ] Back to Menu", 40, 50, fill='gray', size=13, align='left')
 
-        drawLabel(f"SCORE: {app.demo_score}", app.width - 260, 35, fill='yellow', size=24, bold=True, align='left')
+    
+        
 
-        for target in app.demo_targets:
-            base_color = 'cyan' if app.camera_mode.value == 0 else 'magenta'
-            if target.flash_timer > 0:
-                drawCircle(target.x, target.y, target.radius + 15, fill='white', opacity=80)
-            
-            drawCircle(target.x, target.y, target.radius, fill=None, border=base_color, opacity=50)
-            
-            # 👈 核心修复点：计算蓄力圆环半径，严格要求 r > 1 才绘制，防止 0.0 半径导致崩溃！
-            inner_r = target.radius * target.progress
-            if inner_r > 1:
-                drawCircle(target.x, target.y, inner_r, fill=base_color, opacity=60)
-
-            drawLabel(target.label, target.x, target.y, fill='white', size=12, bold=True)
-
-        if app.camera_mode.value == 0:
+        if app.camera_mode == 0:
             if app.gaze_x is not None and app.gaze_y is not None:
                 drawLine(app.gaze_x - 20, app.gaze_y, app.gaze_x + 20, app.gaze_y, fill='cyan')
                 drawLine(app.gaze_x, app.gaze_y - 20, app.gaze_x, app.gaze_y + 20, fill='cyan')
                 drawCircle(app.gaze_x, app.gaze_y, 8, fill=None, border='cyan')
-                drawLabel(f"Gaze ({app.gaze_x}, {app.gaze_y})", app.gaze_x, app.gaze_y + 28, fill='cyan', size=11)
-            else:
-                drawLabel("Gaze Signal Lost...", app.width // 2, app.height // 2, fill='red', size=20)
-
+                drawLabel(f"Gaze/Cursor ({app.gaze_x}, {app.gaze_y})", app.gaze_x, app.gaze_y + 28, fill='cyan', size=11)
         else:
-            if app.hand_x is not None and app.hand_y is not None:
-                cursor_color = 'lime' if app.hand_gesture == 'PINCH' else 'magenta'
-                drawCircle(app.hand_x, app.hand_y, 16, fill=cursor_color, opacity=70)
-                drawCircle(app.hand_x, app.hand_y, 24, fill=None, border=cursor_color)
-                drawLabel(f"Gesture: {app.hand_gesture}", app.hand_x, app.hand_y + 35, fill=cursor_color, size=13, bold=True)
-            else:
-                drawLabel("Hand Tracking Searching...", app.width // 2, app.height // 2, fill='red', size=20)
+            for target in app.demo_targets:
+                        base_color = 'cyan' if app.camera_mode == 0 else 'magenta'
+                        if target.flash_timer > 0:
+                            drawCircle(target.x, target.y, target.radius + 15, fill='white', opacity=80)
+            
+                        drawCircle(target.x, target.y, target.radius, fill=None, border=base_color, opacity=50)
+            
+                        inner_r = target.radius * target.progress
+                        if inner_r > 1:
+                            drawCircle(target.x, target.y, inner_r, fill=base_color, opacity=60)
+            
+                        drawLabel(target.label, target.x, target.y, fill='white', size=12, bold=True)
+            hx = app.vision.hand_x if app.vision.hand_x is not None else app.mouse_x
+            hy = app.vision.hand_y if app.vision.hand_y is not None else app.mouse_y
+            cursor_color = 'lime' if (app.vision.hand_gesture == 'PINCH' or app.mouse_pressed) else 'magenta'
+            drawCircle(hx, hy, 16, fill=cursor_color, opacity=70)
+            drawCircle(hx, hy, 24, fill=None, border=cursor_color)
+            drawLabel(f"Gesture: {app.vision.hand_gesture}", hx, hy + 35, fill=cursor_color, size=13, bold=True)
+    elif app.state == 'game':
+        app.bg.draw(app)
+        drawLine(0, 800, app.width, 800, fill='cyan', lineWidth=3)
 
-    if app.camera_cmu_image is not None and app.state != 'intro':
-        cam_w, cam_h = 200, 150
-        cam_x, cam_y = app.width - cam_w - 20, app.height - cam_h - 20
-        drawRect(cam_x - 4, cam_y - 4, cam_w + 8, cam_h + 8, fill='black', opacity=80)
-        drawImage(app.camera_cmu_image, cam_x, cam_y, width=cam_w, height=cam_h)
-        
-        mode_text = "EYE" if app.camera_mode.value == 0 else "HAND"
-        drawLabel(f"CAM FEED [{mode_text}]", cam_x + 10, cam_y + 15, fill='lime', size=11, bold=True, align='left')
+        app.player.draw(app)
 
 
 def onAppStop(app):
-    if getattr(app, 'stop_event', None) is not None:
-        app.stop_event.set()
-
-    if getattr(app, 'queue_thread', None) is not None:
-        app.queue_thread.join(timeout=1)
-
-    if getattr(app, 'vision_process', None) is not None:
-        try:
-            if app.vision_process.is_alive():
-                app.vision_process.terminate()
-                app.vision_process.join(timeout=1)
-        except Exception:
-            pass
+    app.is_running = False
+    if hasattr(app, 'vision_thread'):
+        app.vision_thread.stop()
 
 
 if __name__ == '__main__':

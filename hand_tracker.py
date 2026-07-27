@@ -43,35 +43,35 @@ class HandGestureRecognizer:
         ]
         return [angle < 30.0 for angle in angles]
 
-    def detect_dynamic_swipe(self, current_x, current_y):
+    # def detect_dynamic_swipe(self, current_x, current_y):
         
-        now = time.time()
-        self.history_points.append((current_x, current_y, now))
+    #     now = time.time()
+    #     self.history_points.append((current_x, current_y, now))
 
-        if now - self.last_swipe_time < 0.4 or len(self.history_points) < 6:
-            return None
+    #     if now - self.last_swipe_time < 0.4 or len(self.history_points) < 6:
+    #         return None
 
-        first_x, first_y, first_t = self.history_points[0]
-        dx = current_x - first_x
-        dy = current_y - first_y
-        dt = now - first_t
+    #     first_x, first_y, first_t = self.history_points[0]
+    #     dx = current_x - first_x
+    #     dy = current_y - first_y
+    #     dt = now - first_t
 
-        if dt <= 0:
-            return None
+    #     if dt <= 0:
+    #         return None
 
-        velocity = math.sqrt(dx**2 + dy**2) / dt
+    #     velocity = math.sqrt(dx**2 + dy**2) / dt
 
-        if velocity > 700 and math.sqrt(dx**2 + dy**2) > 120:
-            if abs(dx) > abs(dy) * 1.5:
-                self.last_swipe_time = now
-                self.history_points.clear()
-                return 'SWIPE_RIGHT' if dx > 0 else 'SWIPE_LEFT'
-            elif abs(dy) > abs(dx) * 1.5:
-                self.last_swipe_time = now
-                self.history_points.clear()
-                return 'SWIPE_DOWN' if dy > 0 else 'SWIPE_UP'
+    #     if velocity > 500 and math.sqrt(dx**2 + dy**2) > 120:
+    #         if abs(dx) > abs(dy) * 1.25:
+    #             self.last_swipe_time = now
+    #             self.history_points.clear()
+    #             return 'SWIPE_RIGHT' if dx > 0 else 'SWIPE_LEFT'
+    #         elif abs(dy) > abs(dx) * 1.25:
+    #             self.last_swipe_time = now
+    #             self.history_points.clear()
+    #             return 'SWIPE_DOWN' if dy > 0 else 'SWIPE_UP'
 
-        return None
+    #     return None
 
     def process_hand_gesture(self, landmarks, width, height):
         
@@ -80,9 +80,9 @@ class HandGestureRecognizer:
         screen_x = int(index_tip.x * width)
         screen_y = int(index_tip.y * height)
 
-        swipe = self.detect_dynamic_swipe(screen_x, screen_y)
-        if swipe:
-            return screen_x, screen_y, swipe
+        # swipe = self.detect_dynamic_swipe(screen_x, screen_y)
+        # if swipe:
+        #     return screen_x, screen_y, swipe
 
         if states[1] and not states[2] and not states[3] and not states[4]:
             thumb_tip = landmarks[4]
