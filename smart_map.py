@@ -8,7 +8,6 @@ class Platform:
         self.y = y
         self.width = width
         self.height = height
-        self.type = 'NORMAL'
     def update(self,game_speed,app):
         self.x -= game_speed
 
@@ -23,7 +22,7 @@ class Platform:
 class MovingPlatform(Platform):
     def __init__(self,x,y,width,move_range = 100, move_speed = 0.05, vertical = True):
         super().__init__(x,y,width)
-        self.type = 'MOVING'
+       
         self.base_y = y
         self.base_x = x
         self.move_range = move_range
@@ -43,7 +42,7 @@ class MovingPlatform(Platform):
 class CrumblingPlatform(Platform):
     def __init__(self,x,y,width):
         super().__init__(x,y,width)
-        self.type = 'CRUMBLING'
+    
         self.stepped = False
         self.timer = 30
         self.is_broken = False
@@ -63,3 +62,39 @@ class CrumblingPlatform(Platform):
             return
         #draw
 
+
+
+#gemini flash helped with debug
+class GazeDoor(Platform):
+    def __init__(self, x, y, width, height):
+        super().__init__(x,y,width,height)
+        self.progress = 0.0 
+        self.is_unlocked = False
+
+    def check_interaction(self,x, y, is_pinching=False, mode=0):
+        if self.is_unlocked or x is None or y is None:
+            return
+        
+        cx, cy = self.x + self.w / 2, self.y + self.h / 2
+        dist = ((x - cx)**2 + ( y - cy)**2)**0.5
+        
+        if dist < max(self.width, self.height): 
+            if mode == 0:  
+                self.progress = min(1.0, self.progress + 0.08)
+            else:       
+                if is_pinching:
+                    self.progress = min(1.0, self.progress + 0.08)
+        else:
+            self.progress = max(0.0, self.progress - 0.02)
+
+        if self.progress >= 1.0:
+            self.is_unlocked = True
+            self.is_active = False  
+
+    def draw(self, app):
+        if self.is_unlocked: return
+        drawRect(self.x, self.y, self.w, self.h, fill='magenta', border='cyan', borderWidth=3, opacity=80)
+        if self.progress > 0:
+            dw = self.w * self.progress
+            drawRect(self.x, self.y - 15, dw, 8, fill='lime')
+        drawLabel("LOOK / PINCH TO UNLOCK", self.x + self.w/2, self.y + self.h/2, fill='white', size=11, bold=True)
