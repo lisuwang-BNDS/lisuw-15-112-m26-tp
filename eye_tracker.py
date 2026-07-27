@@ -43,7 +43,7 @@ def detect_gaze_upgraded(frame, eye_cascade):
     eye_blur = cv2.GaussianBlur(eye_roi, (7, 7), 0)
 
     _, threshold = cv2.threshold(eye_blur, 70, 255, cv2.THRESH_BINARY_INV)
-    cv2.imshow('Eye', threshold)
+    #cv2.imshow('Eye', threshold)
     print('ok')
     contours, _ = cv2.findContours(threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -103,7 +103,7 @@ def run_camera_process(queue, stop_event, screen_width, screen_height):
             break
 
         vector, monitor_frame = detect_gaze_upgraded(frame, eye_cascade)
-        cv2.imshow("Eye Tracker Monitor", monitor_frame)
+        #cv2.imshow("Eye Tracker Monitor", monitor_frame)
 
         # if cv2.waitKey(1) & 0xFF == ord('q'):
         #     break
