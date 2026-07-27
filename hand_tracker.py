@@ -35,11 +35,11 @@ class HandGestureRecognizer:
     def detect_finger_states(self, landmarks):
         
         angles = [
-            self.calculate_vector_angle_3d(landmarks[2], landmarks[3], landmarks[4]),   # Thumb
-            self.calculate_vector_angle_3d(landmarks[5], landmarks[6], landmarks[8]),   # Index
-            self.calculate_vector_angle_3d(landmarks[9], landmarks[10], landmarks[12]), # Middle
-            self.calculate_vector_angle_3d(landmarks[13], landmarks[14], landmarks[16]),# Ring
-            self.calculate_vector_angle_3d(landmarks[17], landmarks[18], landmarks[20]) # Pinky
+            self.calculate_vector_angle_3d(landmarks[2], landmarks[3], landmarks[4]),  
+            self.calculate_vector_angle_3d(landmarks[5], landmarks[6], landmarks[8]),   
+            self.calculate_vector_angle_3d(landmarks[9], landmarks[10], landmarks[12]), 
+            self.calculate_vector_angle_3d(landmarks[13], landmarks[14], landmarks[16]),
+            self.calculate_vector_angle_3d(landmarks[17], landmarks[18], landmarks[20]) 
         ]
         return [angle < 30.0 for angle in angles]
 

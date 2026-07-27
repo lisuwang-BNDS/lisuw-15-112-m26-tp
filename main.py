@@ -48,7 +48,7 @@ class RandomParallaxBackground:
         self.layer4_curr = random.choice(self.layer4_pool)
         self.layer4_next = random.choice(self.layer4_pool)
         
-
+#this update function is written by gemini flash 
     def update(self):
         self.offset1 = (self.offset1 + 6 * self.speed1) % self.width
 
@@ -92,7 +92,7 @@ class RandomParallaxBackground:
         drawImage(self.layer4_curr, x1_l4, self.height / 2, align='center', width=self.width, height=self.height)
         drawImage(self.layer4_next, x2_l4, self.height / 2, align='center', width=self.width, height=self.height)
 
-
+#this class is bebugged and rewrite partially by gemini thinking model
 class IntroLogo:
     def __init__(self):
         self.time = 0
@@ -237,7 +237,7 @@ class menu_triggerer:
         return (self.left - margin <= other.x <= self.left + self.w + margin and
                 self.top - margin <= other.y <= self.top + self.h + margin)
 
-
+#This class is debugged with gemini thinking model 
 class DemoTarget:
     def __init__(self, x, y, radius=45, label="TARGET"):
         self.x = x
@@ -319,6 +319,7 @@ def _finish_current_point_capture(app):
     else:
         app.camera_message = 'Look at next point and press space.'
 
+#this function written by gemini thinking model
 def get_image_files(folder_path):
     if not os.path.exists(folder_path):
         return []
@@ -424,6 +425,7 @@ def onAppStart(app):
 
     app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
     app.game_speed = 8
+
     app.vision_thread = VisionTrackerThread(app)
     app.vision_thread.start()
 
@@ -457,17 +459,17 @@ def onStep(app):
             else:
                 app.gaze_x, app.gaze_y = app.mouse_x, app.mouse_y
 
-            cursor_x, cursor_y = app.gaze_x, app.gaze_y
-            is_pinching = app.mouse_pressed
+            #cursor_x, cursor_y = app.gaze_x, app.gaze_y
+            #is_pinching = app.mouse_pressed
 
         
-        else:
-            if app.vision.hand_x is not None and app.vision.hand_y is not None:
-                cursor_x, cursor_y = app.vision.hand_x, app.vision.hand_y
-                is_pinching = (app.vision.hand_gesture == 'PINCH')
-            else:
-                cursor_x, cursor_y = app.mouse_x, app.mouse_y
-                is_pinching = app.mouse_pressed
+        # else:
+        #     if app.vision.hand_x is not None and app.vision.hand_y is not None:
+        #         #cursor_x, cursor_y = app.vision.hand_x, app.vision.hand_y
+        #         #is_pinching = (app.vision.hand_gesture == 'PINCH')
+        #     else:
+        #         cursor_x, cursor_y = app.mouse_x, app.mouse_y
+        #         is_pinching = app.mouse_pressed
 
         for target in app.demo_targets:
             if target.flash_timer > 0:
@@ -557,16 +559,16 @@ def redrawAll(app):
         if app.msg_need_ca != None:
             drawLabel(app.msg_need_ca, app.width//2, 30, fill= 'yellow', bold = True)
         
-
+        #this branch written with gemini flash
         if app.rightest_bottom_building.near(app.character):
             curr_mode = "EYE" if app.camera_mode == 0 else "HAND"
             next_mode = "HAND" if app.camera_mode == 0 else "EYE"
             drawRect(app.width // 2 - 220, 30, 440, 40, fill='black', opacity=80, align='center')
             drawLabel(f"Mode: {curr_mode} | Press [ SPACE ] to switch to {next_mode}", app.width // 2, 30, fill='yellow', size=15, bold=True)
-
+    #this elif branch is debugged and rewritten with gemini flash
     elif app.state == 'calibration':
         drawRect(0, 0, app.width, app.height, fill='aliceBlue')
-
+        
         if app.calib_index < len(app.calib_order):
             current_target_id = app.calib_order[app.calib_index]
             tx, ty = app.calib_targets[current_target_id]

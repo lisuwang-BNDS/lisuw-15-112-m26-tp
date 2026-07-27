@@ -1,5 +1,7 @@
 import math
-
+#different pools
+#hardcoded level
+#some code for map gen
 class Platform:
     def __init__(self,x,y,width,height = 30):
         self.x = x
