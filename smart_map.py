@@ -211,4 +211,93 @@ class Collectible(GameObject):
         self.collected = True
         self.is_active = False
         return self.value
+
+
+class Coin(Collectible):
+    def __init__(self, x, y):
+        super().__init__(x, y, 25, 25)
     
+    def draw(self, app):
+        if self.collected:
+            return
+        drawCircle(self.x, self.y , 12, fill='gold')
+        drawLabel("$", self.x , self.y , fill='orange')
+
+class Gem(Collectible):
+    def __init__(self, x, y, color='cyan'):
+        super().__init__(x, y, 20, 30, value=25)
+        self.color = color
+    
+    def draw(self, app):
+        if self.collected:
+            return
+        
+        drawPolygon(self.x,self.y,12, 4, fill=self.color)
+
+
+class HealthPack(Collectible):
+    def __init__(self, x, y):
+        super().__init__(x, y, 30, 30, value=1)
+    
+    def draw(self, app):
+        if self.collected:
+            return
+        drawRect(self.x , self.y, 20, 30, fill='red')
+
+
+#the following two platform's function and features designed by gemini flash 
+class Spring(Platform):
+    def __init__(self, x, y, width=40, height=20, boost_power=-20):
+        super().__init__(x, y, width, height)
+        self.boost_power = boost_power
+        self.compressed = False
+        self.compress_timer = 0
+    
+    def on_player_stepped(self, player):
+        if not self.compressed:
+            self.compressed = True
+            self.compress_timer = 5
+            player.vy = self.boost_power
+            player.is_grounded = False
+    
+    def update(self, game_speed, app):
+        super().update(game_speed, app)
+        if self.compressed:
+            self.compress_timer -= 1
+            if self.compress_timer <= 0:
+                self.compressed = False
+    
+    def draw(self, app):
+        if self.compressed:
+            drawRect(self.x, self.y + 10, self.width, self.height - 10, fill='lime')
+        else:
+           drawRect(self.x, self.y + self.height - 5, self.width, 5, fill='green')
+
+
+class BouncyPlatform(Platform):
+    def __init__(self, x, y, width, bounciness=1.5):
+        super().__init__(x, y, width)
+        self.bounciness = bounciness
+    
+    def on_player_stepped(self, player):
+        player.vy = -abs(player.vy) * self.bounciness
+        if abs(player.vy) < 8:
+            player.vy = -12
+    
+    def draw(self, app):
+        drawRect(self.x, self.y, self.width, self.height, fill='pink')
+        drawLabel("BOUNCE", self.x, self.y , fill='white')
+
+######HARD COOOODEED TUTORIAL LEVEL.  TAT
+class TutorialLevel:
+    def __init__(self):
+        self.gameobjects = []
+        self.current = 0
+        self.sections = self._create()
+        self.spawned = []
+        self.section_start_x = 0
+        self.text = ""
+        self.timer = 0
+        self.totdis = 0  #
+    
+    def _create(self):
