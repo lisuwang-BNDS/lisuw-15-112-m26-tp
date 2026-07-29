@@ -9,9 +9,9 @@ class GameObject():
         self.x = x
         self.y = y
         self.width = width
-        self.right = self.x + self.width
+    
         self.height = height
-        self.bottom = self.y +self.height
+       
         self.is_active = True
   
     
@@ -19,14 +19,19 @@ class GameObject():
         return (self.x, self.y, self.width, self.height)
     
     def collides_with(self, other):
-        ox,oy,ow,oh = other.get_rect()
+        ox, oy, ow, oh = other.get_rect()
         oright = ox + ow
         odown = oy + oh
+        
+        current_right = self.x + self.width
+        current_bottom = self.y + self.height
+        
         LeftOver = self.x < oright
-        RightOver = self.right > ox
+        RightOver = current_right > ox     
         HoriOver = LeftOver and RightOver
+        
         TopOver = self.y < odown
-        BotoOver = self.bottom > oy
+        BotoOver = current_bottom > oy    
         VerOver = TopOver and BotoOver
 
         if HoriOver and VerOver:
@@ -308,8 +313,8 @@ class TutorialLevel:
                         'text': 'This is what every envisioner must goes through <_<, jump on these to see what you can do! ',
                         'objects': [
                             Platform(400, 750, 200),
-                            Platform(700, 700, 200),
-                            Platform(1000, 650, 200),
+                            Platform(950, 700, 200),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -317,8 +322,8 @@ class TutorialLevel:
                         'text': 'Great moves, now time your jumps !',
                         'objects': [
                             MovingPlatform(400, 750, 150, move_range=80, vertical=True),
-                            MovingPlatform(700, 700, 150, move_range=60, vertical=True),
-                            MovingPlatform(1000, 650, 150, move_range=100, vertical=True),
+                            MovingPlatform(950, 700, 150, move_range=60, vertical=True),
+                            MovingPlatform(1500, 650, 150, move_range=100, vertical=True),
                         ]
                     },
                     {
@@ -326,9 +331,9 @@ class TutorialLevel:
                         'text': '',
                         'objects': [
                             CrumblingPlatform(400, 750, 150),
-                            Platform(600, 700, 100),
-                            CrumblingPlatform(750, 650, 150),
-                            Platform(950, 600, 200),
+                            Platform(900, 700, 100),
+                            CrumblingPlatform(1300, 650, 150),
+                            Platform(1700, 600, 200),
                         ]
                     },
                     {
@@ -336,9 +341,9 @@ class TutorialLevel:
                         'text': '',
                         'objects': [
                             BouncyPlatform(400, 750, 150, bounciness=1.8),
-                            Platform(650, 650, 150),
-                            BouncyPlatform(850, 550, 150, bounciness=2.0),
-                            Platform(1100, 450, 200),
+                            Platform(950, 650, 150),
+                            BouncyPlatform(1400, 550, 150, bounciness=2.0),
+                            Platform(1850, 450, 200),
                         ]
                     },
                     {
@@ -346,9 +351,9 @@ class TutorialLevel:
                         'text': '',
                         'objects': [
                             Spring(450, 780, boost_power=-18),
-                            Platform(700, 650, 200),
-                            Spring(950, 630, boost_power=-22),
-                            Platform(1200, 500, 200),
+                            Platform(900, 650, 200),
+                            Spring(1350, 630, boost_power=-22),
+                            Platform(1800, 500, 200),
                         ]
                     },
                     
@@ -359,10 +364,10 @@ class TutorialLevel:
                             Platform(400, 750, 200),
                             Coin(450, 700),
                             Coin(500, 700),
-                            Platform(700, 700, 200),
-                            Coin(750, 650),
-                            Coin(800, 650),
-                            Platform(1000, 650, 200),
+                            Platform(950, 700, 200),
+                            Coin(1000, 650),
+                            Coin(1050, 650),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -371,10 +376,10 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 200),
                             Gem(450, 700),
-                            Platform(700, 650, 200),
-                            Gem(750, 600),
-                            Gem(800, 600),
-                            Platform(1000, 550, 200),
+                            Platform(950, 650, 200),
+                            Gem(1000, 600),
+                            Gem(1050, 600),
+                            Platform(1500, 550, 200),
                         ]
                     },
                     {
@@ -383,9 +388,9 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 200),
                             HealthPack(500, 700),
-                            Platform(700, 700, 200),
-                            HealthPack(800, 650),
-                            Platform(1000, 650, 200),
+                            Platform(950, 700, 200),
+                            HealthPack(1050, 650),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -394,10 +399,10 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 200),
                             Spike(500, 770),
-                            Platform(700, 700, 200),
-                            Spike(800, 720),
-                            Spike(850, 720),
-                            Platform(1000, 650, 200),
+                            Platform(950, 700, 200),
+                            Spike(1050, 720),
+                            Spike(1100, 720),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -406,9 +411,9 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 300),
                             Enemy(500, 690, patrol_range=80),
-                            Platform(800, 700, 300),
-                            Enemy(900, 640, patrol_range=100),
-                            Platform(1200, 650, 200),
+                            Platform(950, 700, 300),
+                            Enemy(1050, 640, patrol_range=100),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -417,9 +422,9 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 200),
                             FlyingEnemy(500, 600),
-                            Platform(700, 700, 200),
-                            FlyingEnemy(800, 550),
-                            Platform(1000, 650, 200),
+                            Platform(950, 700, 200),
+                            FlyingEnemy(1050, 550),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -427,8 +432,8 @@ class TutorialLevel:
                         'text': '',
                         'objects': [
                             Platform(400, 750, 200),
-                            GazeDoor(700, 650, 80, 100),
-                            Platform(900, 650, 200),
+                            GazeDoor(950, 650, 80, 100),
+                            Platform(1150, 650, 200),
                         ]
                     },
         
@@ -439,8 +444,8 @@ class TutorialLevel:
         self.totdis += gamespeed
         if self.current < len(self.sections):
             section = self.sections[self.current]
-            secStar = self.current * 1200 #each sec 1200 px
-            secEnd = secStar + 1200
+            secStar = self.current * 1400 #each sec 1400 px (increased for wider platform spacing)
+            secEnd = secStar + 1400
             if self.totdis >= secStar and not any(v for v in self.spawned if hasattr(v, 'hadsec' ) and v.hadsec == self.current):
                 for v in section['objects']:
                     newX = app.width + 200 + v.x*0.5
@@ -502,37 +507,60 @@ class TutorialLevel:
         playeIsOnPlat = False
         highestPl = 900
         landedPl = None
+        
         for v in self.spawned:
             if v.is_active == False:
                 continue
-            if v.collides_with(player):
-                if isinstance(v, Platform):
+            if isinstance(v, GazeDoor):
+                if v.collides_with(player):
+                    if hasattr(app, 'gaze_x') and hasattr(app, 'gaze_y'):
+                       v.check_interaction(app.gaze_x, app.gaze_y, is_pinching=(app.vision.hand_gesture == 'PINCH' if hasattr(app, 'vision') else False), mode=app.camera_mode if hasattr(app, 'camera_mode') else 0)
+            
+            if isinstance(v, Platform):
+                if v.collides_with(player):
                     playerBot = player.y + player.height
+                    playerTop = player.y
+                    playerLeft = player.x
+                    playerRight = player.x + player.width
                     playerLastBot = playerBot - player.vy
-                    centerx = player.x + player.width/2
-                    if (v.x <= centerx <= v.x + v.width):
-                        if playerLastBot >= v.y - 5 and player.vy > 0 and playerBot >= v.y:
-                            if v.y < highestPl:
-                                highestPl= v.y
-                                playeIsOnPlat = True
-                                landedPl = v
+                    playerLastTop = playerTop - player.vy
+                    
+                    if playerLastBot <= v.y + 5 and player.vy >= 0 and playerBot >= v.y:
+                        if v.y < highestPl:
+                            highestPl = v.y
+                            playeIsOnPlat = True
+                            landedPl = v
+                    
+                    elif playerLastTop >= v.y + v.height - 5 and player.vy < 0 and playerTop <= v.y + v.height:
+        
+                        player.y = v.y + v.height
+                        player.vy = 0
+                    
+                    elif playerRight >= v.x and playerLeft < v.x:
+                        player.x = v.x - player.width
+                    
+                    elif playerLeft <= v.x + v.width and playerRight > v.x + v.width:
+                        player.x = v.x + v.width
+            
             elif isinstance(v, Collectible):
-                if not v.collected:
-                    v.on_collect(player)
+                if v.collides_with(player):
+                    if not v.collected:
+                        v.on_collect(player)
 
             elif isinstance(v, Obstacle):
-                #  damage 
-                player.x = 200
-                player.y = 730
-                player.vy = 0
-            elif isinstance(v, GazeDoor):
-                if hasattr(app, 'gaze_x') and hasattr(app, 'gaze_y'):
-                   v.check_interaction(app.gaze_x, app.gaze_y, is_pinching=(app.vision.hand_gesture == 'PINCH' if hasattr(app, 'vision') else False), mode=app.camera_mode if hasattr(app, 'camera_mode') else 0)
+                if v.collides_with(player):
+                    #  damage 
+                    player.x = 200
+                    player.y = 730
+                    player.vy = 0
+                    player.jumps_remaining = player.max_jumps  
+            
         if playeIsOnPlat and landedPl:
             player.y = highestPl - player.height
             player.vy = 0
             player.is_grounded = True
             player.ground_y = highestPl
+            player.jumps_remaining = player.max_jumps 
             landedPl.on_player_stepped(player)
         else:
             if player.y + player.height >= 900:
@@ -540,8 +568,10 @@ class TutorialLevel:
                 player.vy = 0
                 player.is_grounded = True
                 player.ground_y = 900
+                player.jumps_remaining = player.max_jumps  
             else:
                 player.is_grounded = False
+                player.ground_y = 900
 
 
 

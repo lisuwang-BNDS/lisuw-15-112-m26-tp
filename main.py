@@ -49,7 +49,8 @@ class RandomParallaxBackground:
         self.layer4_curr = random.choice(self.layer4_pool)
         self.layer4_next = random.choice(self.layer4_pool)
         
-#this update function is written by gemini flash 
+# #this update function is partially written by gemini flash 
+
     def update(self):
         self.offset1 = (self.offset1 + 6 * self.speed1) % self.width
 
@@ -184,29 +185,65 @@ class Player:
         self.width = width
         self.height = height
         self.vy = 0.0
-        self.g = 0.8 # gravitational a, since on graphics + means down
-        self.jump_power = -18
+        self.g = 1.5 # gravitational a, since on graphics + means down
+        self.jump_power = -22
         self.is_grounded = False
         self.ground_y = 900
+        self.jumps_remaining = 2  
+        self.max_jumps = 2
+        self.dash_cooldown = 0
+        self.dash_max_cooldown = 60  # 1.2 sec
+        self.dash_speed = 25
+        self.dash_duration = 15
+        self.dash_timer = 0
+        self.is_dashing = False
+        self.dash_direction = 1  
         self.state = 'run' #for future animation and so ( run jump fall dash slide...)
 
     def get_rect(self):
             return (self.x, self.y, self.width, self.height)
         
     def jump(self):
-        if self.is_grounded:
+        if self.jumps_remaining > 0:
             self.vy = self.jump_power
+            self.jumps_remaining -= 1
             self.is_grounded = False
             self.state = 'jump'
+    
+    def dash(self, direction):
+        print("enter dash function")
+        print(self.dash_cooldown)
+        if self.dash_cooldown == 0 and not self.is_dashing:
+            print('actually fashing')
+            self.is_dashing = True
+            self.dash_timer = self.dash_duration
+            self.dash_direction = direction
+            self.dash_cooldown = self.dash_max_cooldown
+            self.state = 'dash'
+
+
     def update(self, current_ground = 900):
+        if self.is_dashing:
+            self.x += self.dash_speed * self.dash_direction
+            self.vy = 0
+            self.dash_timer -= 1
+            if self.dash_timer <= 0:
+                self.is_dashing = False
+        print('update', self.dash_cooldown)
+        if self.dash_cooldown > 0:
+            print('hi')
+            self.dash_cooldown -= 1
+        
         self.ground_y = current_ground
-        self.vy += self.g
-        self.y += self.vy
+        if not self.is_dashing:
+            self.vy += self.g
+            self.y += self.vy
         feet_y = self.y + self.height
         if feet_y >= self.ground_y:
             self.y = self.ground_y - self.height
             self.vy = 0
             self.is_grounded = True
+            self.jumps_remaining = self.max_jumps  
             self.state = 'run'
         else:
             self.is_grounded = False
@@ -450,10 +487,10 @@ def onStep(app):
     elif app.state in ('demo', 'game') : 
         if app.state == 'game':
             app.bg.update()
+            app.player.update()
             if app.insideGame == 'tutorial':
                 app.tutorial.update(app.game_speed,app)
-                app.player.vy += app.player.g
-                app.player.y += app.player.vy
+            
                 app.tutorial.check_collisions(app.player, app)
             else:
                 pass #normal game
@@ -524,6 +561,10 @@ def onKeyPress(app, key):
                 app.player.jump()
         elif key == 's': ############
             app.camera_mode = 1 - app.camera_mode
+        elif key == 'd' and app.state == 'game':
+            app.player.dash(1)
+        elif key == 'a' and app.state == 'game':
+            app.player.dash(-1)
         
 
 
