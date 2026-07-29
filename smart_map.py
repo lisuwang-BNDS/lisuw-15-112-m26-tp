@@ -60,7 +60,7 @@ class MovingPlatform(Platform):
         self.vertical = vertical
         self.time_step = 0
     def update(self,game_speed,app):
-        super().update(game_speed)
+        super().update(game_speed,app)
         self.base_x -= game_speed
         self.time_step += self.move_speed
         deviates = math.sin(self.time_step) * self.move_range
@@ -85,7 +85,7 @@ class CrumblingPlatform(Platform):
         self.stepped = True
 
     def update(self,game_speed, app =None):
-        super().update(game_speed)
+        super().update(game_speed,app)
         if self.stepped and not self.is_broken:
             self.timer -= 1
             if self.timer <= 0:
@@ -111,12 +111,13 @@ class GazeDoor(Platform):
         super().__init__(x,y,width,height)
         self.progress = 0.0 
         self.is_unlocked = False
+        
 
     def check_interaction(self,x, y, is_pinching=False, mode=0):
         if self.is_unlocked or x is None or y is None:
             return
         
-        cx, cy = self.x + self.w / 2, self.y + self.h / 2
+        cx, cy = self.x + self.width / 2, self.y + self.height / 2
         dist = ((x - cx)**2 + ( y - cy)**2)**0.5
         
         if dist < max(self.width, self.height): 
@@ -134,11 +135,11 @@ class GazeDoor(Platform):
 
     def draw(self, app):
         if self.is_unlocked: return
-        drawRect(self.x, self.y, self.w, self.h, fill='magenta', border='cyan', borderWidth=3, opacity=80)
+        drawRect(self.x, self.y, self.width, self.height, fill='magenta', border='cyan', borderWidth=3, opacity=80)
         if self.progress > 0:
-            dw = self.w * self.progress
+            dw = self.width * self.progress
             drawRect(self.x, self.y - 15, dw, 8, fill='lime')
-        drawLabel("LOOK / PINCH TO UNLOCK", self.x + self.w/2, self.y + self.h/2, fill='white', size=11, bold=True)
+        drawLabel("LOOK / PINCH TO UNLOCK", self.x + self.width/2, self.y + self.height/2, fill='white', size=11, bold=True)
 
 class Obstacle(GameObject):
 
@@ -440,24 +441,24 @@ class TutorialLevel:
             section = self.sections[self.current]
             secStar = self.current * 1200 #each sec 1200 px
             secEnd = secStar + 1200
-        if self.totdis >= secStar and not any(v for v in self.spawned if hasattr(v, 'hadsec' ) and v.hadsec == self.current):
-            for v in section['objects']:
-                newX = app.width + 200 + v.x*0.5
-                new = self.getanother(v, newX)
-                new.hadsec = self.current
-                self.spawned.append(new)
-            self.text = section['text']
-            self.timer = 180
-        if self.totdis >= secEnd:
-            self.current += 1
-        if self.timer > 0:
-            self.timer -= 1
-        else:
-            self.text = '' #######
-        for v in self.spawned[:]:
-            v.update(gamespeed,app)
-            if v.x < -200:
-                self.spawned.remove(v)
+            if self.totdis >= secStar and not any(v for v in self.spawned if hasattr(v, 'hadsec' ) and v.hadsec == self.current):
+                for v in section['objects']:
+                    newX = app.width + 200 + v.x*0.5
+                    new = self.getanother(v, newX)
+                    new.hadsec = self.current
+                    self.spawned.append(new)
+                self.text = section['text']
+                self.timer = 180
+            if self.totdis >= secEnd:
+                self.current += 1
+            if self.timer > 0:
+                self.timer -= 1
+            else:
+                self.text = '' #######
+            for v in self.spawned[:]:
+                v.update(gamespeed,app)
+                if v.x < -200:
+                    self.spawned.remove(v)
     def getanother(self,v,newX):
         classOfclone = v.__class__
         if classOfclone == Platform:
@@ -496,8 +497,8 @@ class TutorialLevel:
             drawLabel(self.text,app.width//2, 75, fill ='white')
 
 
-    def check_collision(self,player,app):
-        playerinfo = player.getRect()
+    def check_collisions(self,player,app):
+        playerinfo = player.get_rect()
         playeIsOnPlat = False
         highestPl = 900
         landedPl = None

@@ -430,7 +430,7 @@ def onAppStart(app):
     app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
     app.game_speed = 8
 
-    app.tutiorail = TutorialLevel()
+    app.tutorial = TutorialLevel()
     app.insideGame = 'tutorial' # future add different difficulty and non tutorial 
 
     app.vision_thread = VisionTrackerThread(app)
