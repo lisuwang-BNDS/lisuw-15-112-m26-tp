@@ -511,11 +511,37 @@ class TutorialLevel:
                     playerLastBot = playerBot - player.vy
                     centerx = player.x + player.width/2
                     if (v.x <= centerx <= v.x + v.width):
-                        if playerLastBot >= v.y - 10 and player.vy >= 0:
+                        if playerLastBot >= v.y - 5 and player.vy > 0 and playerBot >= v.y:
                             if v.y < highestPl:
                                 highestPl= v.y
                                 playeIsOnPlat = True
                                 landedPl = v
+            elif isinstance(v, Collectible):
+                if not v.collected:
+                    v.on_collect(player)
+
+            elif isinstance(v, Obstacle):
+                #  damage 
+                player.x = 200
+                player.y = 730
+                player.vy = 0
+            elif isinstance(v, GazeDoor):
+                if hasattr(app, 'gaze_x') and hasattr(app, 'gaze_y'):
+                   v.check_interaction(app.gaze_x, app.gaze_y, is_pinching=(app.vision.hand_gesture == 'PINCH' if hasattr(app, 'vision') else False), mode=app.camera_mode if hasattr(app, 'camera_mode') else 0)
+        if playeIsOnPlat and landedPl:
+            player.y = highestPl - player.height
+            player.vy = 0
+            player.is_grounded = True
+            player.ground_y = highestPl
+            landedPl.on_player_stepped(player)
+        else:
+            if player.y + player.height >= 900:
+                player.y = 900 - player.height
+                player.vy = 0
+                player.is_grounded = True
+                player.ground_y = 900
+            else:
+                player.is_grounded = False
 
 
 

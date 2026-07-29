@@ -184,8 +184,8 @@ class Player:
         self.width = width
         self.height = height
         self.vy = 0.0
-        self.g = 0.95 # gravitational a, since on graphics + means down
-        self.jump_power = -10
+        self.g = 0.8 # gravitational a, since on graphics + means down
+        self.jump_power = -18
         self.is_grounded = False
         self.ground_y = 900
         self.state = 'run' #for future animation and so ( run jump fall dash slide...)
@@ -428,7 +428,7 @@ def onAppStart(app):
     l4_pool = layer4_files
 
     app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
-    app.game_speed = 8
+    app.game_speed = 5
 
     app.tutorial = TutorialLevel()
     app.insideGame = 'tutorial' # future add different difficulty and non tutorial 
