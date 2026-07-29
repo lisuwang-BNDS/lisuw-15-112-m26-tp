@@ -573,16 +573,36 @@ class TutorialLevel:
                 player.is_grounded = False
                 player.ground_y = 900
 
+#integtate. camera 
 
+#simple harded only one jump eye and hand , double jumop and dash 
 
+#rand0om just do regular 
 
-    def end(self):
-        return self.current >= len(self.sections)
+#UI... UX
+class MapGenerator:
+    def __init__(self, player):
+        self.had = []
+        self.player = player
+        self.sumDist = 0
+        self.lastX = 100
+        self.lastY = 750
+        self.lastW = 400
+        startPlatform = Platform(self.last_x, self.last_y, self.last_width)
+        self.had.append(startPlatform)
         
+    def difficulty(self):
+        return min(1.0, self.sumDist / 10000)
 
-
-        
-
-
-            
-        
+    def update(self, speed, app):
+        self.sumDist += speed
+        diff = self.difficulty()
+        for v in self.had[:]:
+            v.update(speed, app)
+            if hasattr(v, 'x') and v.x + getattr(v, 'width', 50) < -200:
+                self.had.remove(v)
+        if self.lastX < app.width + 600:
+            self.gen(diff, app)
+    def gen(self,diff,app):
+        pass
+    
