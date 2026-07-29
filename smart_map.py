@@ -299,5 +299,138 @@ class TutorialLevel:
         self.text = ""
         self.timer = 0
         self.totdis = 0  #
-    
+    #some part of the tedious parameter is handled by gemini thinking model
     def _create(self):
+        return [
+                    {
+                        'name': 'Basic Platforms',
+                        'text': 'This is what every envisioner must goes through <_<, jump on these to see what you can do! ',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Platform(700, 700, 200),
+                            Platform(1000, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Moving Platforms',
+                        'text': 'Great moves, now time your jumps !',
+                        'objects': [
+                            MovingPlatform(400, 750, 150, move_range=80, vertical=True),
+                            MovingPlatform(700, 700, 150, move_range=60, vertical=True),
+                            MovingPlatform(1000, 650, 150, move_range=100, vertical=True),
+                        ]
+                    },
+                    {
+                        'name': 'Crumbling Platforms',
+                        'text': '',
+                        'objects': [
+                            CrumblingPlatform(400, 750, 150),
+                            Platform(600, 700, 100),
+                            CrumblingPlatform(750, 650, 150),
+                            Platform(950, 600, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Bouncy Platforms',
+                        'text': '',
+                        'objects': [
+                            BouncyPlatform(400, 750, 150, bounciness=1.8),
+                            Platform(650, 650, 150),
+                            BouncyPlatform(850, 550, 150, bounciness=2.0),
+                            Platform(1100, 450, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Springs',
+                        'text': '',
+                        'objects': [
+                            Spring(450, 780, boost_power=-18),
+                            Platform(700, 650, 200),
+                            Spring(950, 630, boost_power=-22),
+                            Platform(1200, 500, 200),
+                        ]
+                    },
+                    
+                    {
+                        'name': 'Collectibles - Coins',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Coin(450, 700),
+                            Coin(500, 700),
+                            Platform(700, 700, 200),
+                            Coin(750, 650),
+                            Coin(800, 650),
+                            Platform(1000, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Collectibles - Gems',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Gem(450, 700),
+                            Platform(700, 650, 200),
+                            Gem(750, 600),
+                            Gem(800, 600),
+                            Platform(1000, 550, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Health Packs',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            HealthPack(500, 700),
+                            Platform(700, 700, 200),
+                            HealthPack(800, 650),
+                            Platform(1000, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Spikes',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Spike(500, 770),
+                            Platform(700, 700, 200),
+                            Spike(800, 720),
+                            Spike(850, 720),
+                            Platform(1000, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Ground Enemies',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 300),
+                            Enemy(500, 690, patrol_range=80),
+                            Platform(800, 700, 300),
+                            Enemy(900, 640, patrol_range=100),
+                            Platform(1200, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Flying Enemies',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            FlyingEnemy(500, 600),
+                            Platform(700, 700, 200),
+                            FlyingEnemy(800, 550),
+                            Platform(1000, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Gaze Doors',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            GazeDoor(700, 650, 80, 100),
+                            Platform(900, 650, 200),
+                        ]
+                    },
+        
+                ]
+            
+        
