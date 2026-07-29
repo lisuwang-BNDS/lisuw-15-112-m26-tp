@@ -458,6 +458,72 @@ class TutorialLevel:
             v.update(gamespeed,app)
             if v.x < -200:
                 self.spawned.remove(v)
+    def getanother(self,v,newX):
+        classOfclone = v.__class__
+        if classOfclone == Platform:
+            return classOfclone(newX, v.y, v.width, v.height)
+        elif classOfclone == MovingPlatform:
+            return classOfclone(newX, v.y, v.width, v.move_range, v.move_speed, v.vertical)
+        elif classOfclone == CrumblingPlatform:
+            return classOfclone(newX, v.y, v.width)
+        elif classOfclone == BouncyPlatform:
+            return classOfclone(newX, v.y, v.width, v.bounciness)
+        elif classOfclone == Spring:
+            return classOfclone(newX, v.y, v.width, v.height, v.boost_power)
+        
+        elif classOfclone == Spike:
+            return classOfclone(newX, v.y, v.width, v.height)
+        elif classOfclone == Enemy:
+            return classOfclone(newX, v.y, v.width, v.height, v.patrol_range)
+        elif classOfclone == FlyingEnemy:
+            return classOfclone(newX, v.y, v.width, v.height)
+        elif classOfclone == Coin:
+            return classOfclone(newX, v.y)
+        elif classOfclone == Gem:
+            return classOfclone(newX, v.y, v.color)
+        elif classOfclone == HealthPack:
+            return classOfclone(newX, v.y)
+        elif classOfclone == GazeDoor:
+            return classOfclone(newX, v.y, v.width, v.height)
+        else:
+            return classOfclone
+
+    def draw(self,app):
+        for v in self.spawned:
+            if v.is_active:
+                v.draw(app)
+        if self.text:
+            drawLabel(self.text,app.width//2, 75, fill ='white')
+
+
+    def check_collision(self,player,app):
+        playerinfo = player.getRect()
+        playeIsOnPlat = False
+        highestPl = 900
+        landedPl = None
+        for v in self.spawned:
+            if v.is_active == False:
+                continue
+            if v.collides_with(player):
+                if isinstance(v, Platform):
+                    playerBot = player.y + player.height
+                    playerLastBot = playerBot - player.vy
+                    centerx = player.x + player.width/2
+                    if (v.x <= centerx <= v.x + v.width):
+                        if playerLastBot >= v.y - 10 and player.vy >= 0:
+                            if v.y < highestPl:
+                                highestPl= v.y
+                                playeIsOnPlat = True
+                                landedPl = v
+
+
+
+
+    def end(self):
+        return self.current >= len(self.sections)
+        
+
+
         
 
 
