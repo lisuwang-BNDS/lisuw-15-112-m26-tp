@@ -20,6 +20,7 @@ from cmu_graphics import *
 import random
 import eye_tracker
 from vision_tracker import VisionTrackerThread, VisionData
+from smart_map import TutorialLevel
 
 Samplesize_need = 20
 
@@ -189,6 +190,9 @@ class Player:
         self.ground_y = 900
         self.state = 'run' #for future animation and so ( run jump fall dash slide...)
 
+    def get_rect(self):
+            return (self.x, self.y, self.width, self.height)
+        
     def jump(self):
         if self.is_grounded:
             self.vy = self.jump_power
@@ -426,6 +430,9 @@ def onAppStart(app):
     app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
     app.game_speed = 8
 
+    app.tutiorail = TutorialLevel()
+    app.insideGame = 'tutorial' # future add different difficulty and non tutorial 
+
     app.vision_thread = VisionTrackerThread(app)
     app.vision_thread.start()
 
@@ -443,7 +450,13 @@ def onStep(app):
     elif app.state in ('demo', 'game') : 
         if app.state == 'game':
             app.bg.update()
-            app.player.update(current_ground=900)
+            if app.insideGame == 'tutorial':
+                app.tutorial.update(app.game_speed,app)
+                app.player.vy += app.player.g
+                app.player.y += app.player.vy
+                app.tutorial.check_collisions(app.player, app)
+            else:
+                pass #normal game
             if app.camera_mode == 1 and app.vision.hand_gesture == 'PINCH':
                 app.player.jump()
 
@@ -509,8 +522,9 @@ def onKeyPress(app, key):
             
             if app.state == 'game':
                 app.player.jump()
+        elif key == 's': ############
             app.camera_mode = 1 - app.camera_mode
-            
+        
 
 
 def onKeyHold(app, keys):
@@ -641,6 +655,11 @@ def redrawAll(app):
         drawLine(0, 800, app.width, 800, fill='cyan', lineWidth=3)
 
         app.player.draw(app)
+
+        if app.insideGame == 'tutorial': ##remember if not
+            app.tutorial.draw(app)
+        
+
 
 
 def onAppStop(app):

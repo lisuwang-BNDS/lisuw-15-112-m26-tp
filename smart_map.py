@@ -432,5 +432,34 @@ class TutorialLevel:
                     },
         
                 ]
+
+
+    def update(self,gamespeed, app):
+        self.totdis += gamespeed
+        if self.current < len(self.sections):
+            section = self.sections[self.current]
+            secStar = self.current * 1200 #each sec 1200 px
+            secEnd = secStar + 1200
+        if self.totdis >= secStar and not any(v for v in self.spawned if hasattr(v, 'hadsec' ) and v.hadsec == self.current):
+            for v in section['objects']:
+                newX = app.width + 200 + v.x*0.5
+                new = self.getanother(v, newX)
+                new.hadsec = self.current
+                self.spawned.append(new)
+            self.text = section['text']
+            self.timer = 180
+        if self.totdis >= secEnd:
+            self.current += 1
+        if self.timer > 0:
+            self.timer -= 1
+        else:
+            self.text = '' #######
+        for v in self.spawned[:]:
+            v.update(gamespeed,app)
+            if v.x < -200:
+                self.spawned.remove(v)
+        
+
+
             
         
