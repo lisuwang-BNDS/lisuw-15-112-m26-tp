@@ -654,9 +654,43 @@ class RecursiveSmartMapGenerator:
         return potential
 
     def _isLegal(self, y, Plats, diff):
-        pass
+        if y < 300 or y > 900:
+            return False
+        return True
     def _makePlat(self,Plats, nextX,nextY,width,diff):
-        pass
-    def _makeThing(self,plat,diff):
-        pass
+        if Plats == MovingPlatform:
+            return MovingPlatform(nextX,nextY, width, move_range=random.randint(50, 100), vertical=random.choice([True, False]))
+        elif Plats == BouncyPlatform:
+            return BouncyPlatform(nextX,nextY, width, random.uniform(1.4, 1.9) )
+        elif Plats == Spring:
+            return Spring(nextX,nextY, width=40, boost_power=-24)
+        elif Plats == CrumblingPlatform:
+            return CrumblingPlatform(nextX,nextY, width)
+        else:
+            return Platform(nextX,nextY, width)
     
+    def _makeThing(self,plat,diff):
+        things = []
+        px, py, pw = plat.x, plat.y, plat.width
+        if random.random() < (0.2 + diff * 0.3) and pw >= 120:
+            tType = random.choice(['spike', 'enemy', 'gaze_door'])
+            if tType  == 'spike' and not isinstance(plat, (MovingPlatform, CrumblingPlatform)):
+                things.append(Spike(px + pw / 2 - 15, py - 30))
+            elif tType  == 'enemy' and pw >= 160:
+                things.append(Enemy(px + pw / 2, py - 60, patrol_range=min(60, pw // 4)))
+            elif tType  == 'gaze_door' and diff > 0.4:
+                things.append(GazeDoor(px + pw / 2 - 40, py - 100, 80, 100))
+        elif random.random() < 0.5:
+            item_type = random.choice(['coin', 'gem'])
+            if item_type == 'coin':
+                things.append(Coin(px + pw / 2, py - 35))
+            else:
+                things.append(Gem(px + pw / 2, py - 35))
+                
+        return things
+    def draw(self, app):
+        for v in self.spawned:
+            if getattr(v, 'is_active', True):
+                v.draw(app)
+    def checkCollision(self,player,app):
+        pass

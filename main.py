@@ -39,7 +39,7 @@ from cmu_graphics import *
 import random
 import eye_tracker
 from vision_tracker import VisionTrackerThread, VisionData
-from smart_map import TutorialLevel
+from smart_map import TutorialLevel,RecursiveSmartMapGenerator
 
 Samplesize_need = 20
 
@@ -502,8 +502,8 @@ def onAppStart(app):
     app.game_speed = 3
 
     app.tutorial = TutorialLevel()
-    app.insideGame = 'tutorial' # future add different difficulty and non tutorial
-    
+    app.insideGame = 'smart' # future add different difficulty and non tutorial
+    app.smart_map = RecursiveSmartMapGenerator(app.player)
     app.modeSwitch = (app.width - 220, 200, 200, 50)
     app.Switchcooldown = 0
     app.MaxCoolSwitch= 30  
@@ -545,8 +545,9 @@ def onStep(app):
                 app.tutorial.update(app.game_speed,app)
             
                 app.tutorial.check_collisions(app.player, app)
-            else:
-                pass 
+            elif app.insideGame == 'smart':
+                app.smart_map.update(app.game_speed, app)
+                #app.smart_map.check_collisions(app.player, app)
             
             if app.Switchcooldown == 0:
                 x, y, w, h = app.modeSwitch
@@ -854,6 +855,8 @@ def redrawAll(app):
 
         if app.insideGame == 'tutorial': ##remember if not
             app.tutorial.draw(app)
+        elif app.insideGame == 'smart':
+            app.smart_map.draw(app)
         
         for proj in app.projectiles:
             drawCircle(proj['x'], proj['y'], proj['radius'], fill='yellow')
