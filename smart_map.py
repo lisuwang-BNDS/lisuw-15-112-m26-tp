@@ -501,11 +501,10 @@ class TutorialLevel:
         if self.text:
             drawLabel(self.text,app.width//2, 75, fill ='white')
 
-
     def check_collisions(self,player,app):
         playerinfo = player.get_rect()
         playeIsOnPlat = False
-        highestPl = 900
+        highestPl = float('inf')
         landedPl = None
         
         for v in self.spawned:
@@ -563,15 +562,13 @@ class TutorialLevel:
             player.jumps_remaining = player.max_jumps 
             landedPl.on_player_stepped(player)
         else:
-            if player.y + player.height >= 900:
-                player.y = 900 - player.height
+            player.is_grounded = False
+            if player.y > 1460:
+                player.x = 200
+                player.y = 300
                 player.vy = 0
-                player.is_grounded = True
-                player.ground_y = 900
-                player.jumps_remaining = player.max_jumps  
-            else:
-                player.is_grounded = False
-                player.ground_y = 900
+                player.jumps_remaining = player.max_jumps
+   
 
 #integtate. camera 
 
@@ -614,8 +611,7 @@ class RecursiveSmartMapGenerator:
         if path:
             for plat, things in path:
                 self.spawned.append(plat)
-                for v in things:
-                    self.spawned.extend(things)
+                self.spawned.extend(things)
                 self.last_x = plat.x  + plat.width
                 self.last_y = plat.y
                 self.last_width = plat.width
@@ -657,7 +653,7 @@ class RecursiveSmartMapGenerator:
         return potential
 
     def _isLegal(self, y, Plats, diff):
-        if y < 300 or y > 900:
+        if y < 700 or y > 1400:
             return False
         return True
     def _makePlat(self,Plats, nextX,nextY,width,diff):
@@ -697,7 +693,7 @@ class RecursiveSmartMapGenerator:
                 v.draw(app)
     def checkCollision(self,player,app):
         playerIsOnPlat = False
-        highestPl = 900
+        highestPl = float('inf')
         landedPl = None
         for v in self.spawned:
             if not getattr(v, 'is_active', True):
@@ -753,12 +749,39 @@ class RecursiveSmartMapGenerator:
             player.jumps_remaining = player.max_jumps 
             landedPl.on_player_stepped(player) 
         else:
-            if player.y + player.height >= 900:
-                player.y = 900 - player.height
-                player.vy = 0
-                player.is_grounded = True
-                player.ground_y = 900
-                player.jumps_remaining = player.max_jumps  
-            else:
-                player.is_grounded = False
-                player.ground_y = 900
+            print("detecting")
+            print(player.y)
+            player.is_grounded = False
+            if player.y >= 830:
+
+                print('Player fell into pit!')
+                if hasattr(player, 'hp'):
+                    player.hp -= 1
+                    print(f"HP reduced to {player.hp}")
+                    self.respawnOnPlatform(player)
+                else:
+                    player.x = 200
+                    player.y = 300
+                    player.vy = 0
+                    player.jumps_remaining = player.max_jumps
+    
+    def respawnOnPlatform(self, player):
+        platforms = [v for v in self.spawned if isinstance(v, Platform) and v.x > player.x]
+        if platforms:
+            platforms.sort(key=lambda p: p.x)
+            next_plat = platforms[0]
+            player.x = next_plat.x + next_plat.width / 2 - player.width / 2
+            player.y = next_plat.y - player.height
+            player.vy = 0
+            player.is_grounded = True
+            player.ground_y = next_plat.y
+            player.jumps_remaining = player.max_jumps
+            print(f"Respawned on platform at ({next_plat.x}, {next_plat.y}) with HP: {player.hp}")
+        else:
+            player.x = 150
+            player.y = 750 - player.height
+            player.vy = 0
+            player.is_grounded = True
+            player.ground_y = 750
+            player.jumps_remaining = player.max_jumps
+            print(f"Respawned at start with HP: {player.hp}")
