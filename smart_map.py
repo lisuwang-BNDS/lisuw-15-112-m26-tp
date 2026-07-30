@@ -598,7 +598,7 @@ class RecursiveSmartMapGenerator:
         self.spawned.append(start)
         self.last_x = 400
     def getDifficulty(self):
-        return min(1.0, self.sumDist / 15000.0)
+        return min(1.0, self.sumDist / 5000.0)
     def update(self,speed,app):
         self.sumDist += speed
         for v in self.spawned[:]:
@@ -615,7 +615,7 @@ class RecursiveSmartMapGenerator:
             for plat, things in path:
                 self.spawned.append(plat)
                 for v in things:
-                    self.spawned.append(things)
+                    self.spawned.extend(things)
                 self.last_x = plat.x  + plat.width
                 self.last_y = plat.y
                 self.last_width = plat.width
@@ -643,14 +643,17 @@ class RecursiveSmartMapGenerator:
                         return [(plat, things)] + possibleSol
             return None
     def _GetJumpPoten(self,diff):
-        potential = [(random.randint(120, 200), random.randint(-60, 60), random.randint(160, 260), Platform),
-            (random.randint(160, 240), random.randint(-100, 40), random.randint(140, 220), Platform)]
-        if diff  > 0.3:
-            potential.append((random.randint(180, 280), random.randint(-80, 80), random.randint(120, 180), MovingPlatform))
-            potential.append((random.randint(150, 220), random.randint(-40, 40), random.randint(120, 180), CrumblingPlatform))
-        if diff > 0.5:
-            potential.append((random.randint(220, 320), random.randint(-160, -60), random.randint(100, 160), Spring))
-            potential.append((random.randint(200, 300), random.randint(-80, 80), random.randint(100, 160), BouncyPlatform))
+        potential = [
+            (random.randint(120, 180), random.randint(-40, 40), random.randint(160, 240), Platform),
+            (random.randint(150, 220), random.randint(-60, 30), random.randint(140, 200), Platform),
+            (random.randint(160, 240), random.randint(-50, 50), random.randint(130, 180), MovingPlatform),
+            (random.randint(140, 200), random.randint(-30, 30), random.randint(130, 180), CrumblingPlatform)
+        ]
+        
+        if diff > 0.15:
+            potential.append((random.randint(180, 260), random.randint(-120, -50), random.randint(100, 150), Spring))
+            potential.append((random.randint(160, 240), random.randint(-60, 60), random.randint(110, 160), BouncyPlatform))
+            
         return potential
 
     def _isLegal(self, y, Plats, diff):

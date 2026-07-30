@@ -499,7 +499,7 @@ def onAppStart(app):
     l4_pool = layer4_files
 
     app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
-    app.game_speed = 3
+    app.game_speed = 8
 
     app.tutorial = TutorialLevel()
     app.insideGame = 'smart' # future add different difficulty and non tutorial
@@ -547,7 +547,7 @@ def onStep(app):
                 app.tutorial.check_collisions(app.player, app)
             elif app.insideGame == 'smart':
                 app.smart_map.update(app.game_speed, app)
-                #app.smart_map.check_collisions(app.player, app)
+                app.smart_map.checkCollision(app.player, app)
             
             if app.Switchcooldown == 0:
                 x, y, w, h = app.modeSwitch
