@@ -39,11 +39,24 @@ from cmu_graphics import *
 import random
 import eye_tracker
 from vision_tracker import VisionTrackerThread, VisionData
-from smart_map import TutorialLevel,RecursiveSmartMapGenerator
+from smart_map import TutorialLevel,RecursiveSmartMapGenerator, Bullet, Enemy, FlyingEnemy
 
 Samplesize_need = 20
 
 
+def restart_game(app):
+    app.player = Player(x=200, y=450, width=40, height=70)  # Start from high above
+    app.bullets = []
+    app.projectiles = []
+    app.tutorial = TutorialLevel()
+    app.smart_map = RecursiveSmartMapGenerator(app.player)
+    app.distance = 0
+    app.enemies_killed = 0
+    app.game_start_time = time.time()
+    app.survival_time = 0
+    app.state = 'game'
+    # Respawn player on the starting platform (drop from above)
+    app.smart_map.respawnOnPlatform(app.player)
 
 class RandomParallaxBackground:
     def __init__(self, layer1_path, layer2_pool, layer3_pool, layer4_pool, width, height):
@@ -224,7 +237,11 @@ class Player:
         self.max_weapon_level = 3
         self.projectile_speed = 15
         self.projectile_size = 5
-        self.fire_rate = 0  
+        self.fire_rate = 0
+
+        
+        self.hp = 3
+        self.max_hp = 3  
 
     def get_rect(self):
             return (self.x, self.y, self.width, self.height)
@@ -236,10 +253,17 @@ class Player:
             self.is_grounded = False
             self.state = 'jump'
     
-    def dash(self, direction):
+    def dash(self, direction, screen_width = 1500):
         print("enter dash function")
         print(self.dash_cooldown)
         if self.dash_cooldown == 0 and not self.is_dashing:
+            dash_distance = self.dash_speed * self.dash_duration
+            if direction == 1 and self.x + dash_distance > screen_width - self.width:
+                
+                return
+            if direction == -1 and self.x - dash_distance < 0:
+                return
+            
             print('actually fashing')
             self.is_dashing = True
             self.dash_timer = self.dash_duration
@@ -256,7 +280,7 @@ class Player:
         return False
 
 
-    def update(self, current_ground = 900):
+    def update(self, current_ground = 900, screen_width = 1500, screen_height = 1000):
         if self.is_dashing:
             self.x += self.dash_speed * self.dash_direction
             self.vy = 0
@@ -283,8 +307,24 @@ class Player:
             self.is_grounded = False
             if self.vy > 0:
                 self.state = 'fall'
+        
+        if self.x < 0:
+            self.x = 0
+            self.is_dashing = False  
+        
+        if self.x + self.width > screen_width:
+            self.x = screen_width - self.width
+            self.is_dashing = False 
+        
+        if self.y < 0:
+            self.y = 0
+            self.vy = 0
+        
+        if self.y + self.height > screen_height:
+            self.y = screen_height - self.height
+            self.vy = 0
 
-    def draw(self,app): #make it to sprites later on
+    def draw(self,app): 
         drawRect(self.x, self.y,self.width,self.height, fill='cyan')
         eye_y = self.y + 15
         drawCircle(self.x + self.width-10, eye_y, 4 , fill = 'red')
@@ -408,13 +448,18 @@ def get_image_files(folder_path):
     return sorted(files)
 
 def onAppStart(app):
+    app.distance = 0
+    app.enemies_killed = 0
+    app.game_start_time = time.time()
+    app.survival_time = 0
+    app.bullets = []
     app.width = 1500
     app.height = 1000
     app.stepsPerSecond = 50
     app.is_running = True
     app.fenced = False
     app.msg_need_ca = None
-    app.player = Player(x=200, y=730, width=40, height=70)
+    app.player = Player(x=200, y=450, width=40, height=70)  # Start from high above
 
     app.vision = VisionData()
     app.camera_mode = 0  # 0: Eye, 1: Hand, 2: Keyboard
@@ -499,7 +544,7 @@ def onAppStart(app):
     l4_pool = layer4_files
 
     app.bg = RandomParallaxBackground(l1_path, l2_pool, l3_pool,l4_pool, app.width, app.height)
-    app.game_speed = 8
+    app.game_speed = 10
 
     app.tutorial = TutorialLevel()
     app.insideGame = 'smart' # future add different difficulty and non tutorial
@@ -538,7 +583,10 @@ def onStep(app):
                 _finish_current_point_capture(app)
 
     elif app.state in ('demo', 'game') : 
+        
         if app.state == 'game':
+            app.distance += app.game_speed * 0.1
+            app.survival_time = time.time() - app.game_start_time
             app.bg.update()
             app.player.update()
             if app.insideGame == 'tutorial':
@@ -548,7 +596,9 @@ def onStep(app):
             elif app.insideGame == 'smart':
                 app.smart_map.update(app.game_speed, app)
                 app.smart_map.checkCollision(app.player, app)
-            
+            if app.player.hp <= 0 and app.state == 'game':
+                app.state = 'gameover'
+                return
             if app.Switchcooldown == 0:
                 x, y, w, h = app.modeSwitch
                 if app.camera_mode == 0:
@@ -583,9 +633,12 @@ def onStep(app):
                         Screenx = app.width / 2
                         Screeny = app.height / 2
                         if abs(app.gaze_x - Screenx) < 150 and abs(app.gaze_y - Screeny) < 150:
-                            if app.player.upgrade_weapon():
+                            if app.insideGame == 'smart':
+                                if hasattr(app, 'smart_map'):
+                                    app.smart_map.respawnOnPlatform(app.player)
                                 app.special_skill_ready = False
-                                app.eye_skill_cooldown = 120  
+                                app.eye_skill_cooldown = 120
+                            
                     
                     if app.eye_skill_cooldown > 0:
                         app.eye_skill_cooldown -= 1
@@ -631,6 +684,11 @@ def onStep(app):
             elif app.camera_mode == 2:
                 if app.player.fire_rate > 0:
                     app.player.fire_rate -= 1
+            
+            for b in app.bullets[:]:
+                b.update(app.game_speed, app)
+                if not b.is_active:
+                    app.bullets.remove(b)
                 
             
             for v in app.projectiles[:]:
@@ -640,10 +698,22 @@ def onStep(app):
                     app.projectiles.remove(v)
                     continue
                 
-                if app.insideGame == 'tutorial':
-                    for obj in app.tutorial.spawned:
-                        pass #enemy
-
+                active_map = app.tutorial if app.insideGame == 'tutorial' else app.smart_map
+                for obj in active_map.spawned:
+                    if isinstance(obj, (Enemy, FlyingEnemy)) and getattr(obj, 'is_active', True):
+                        proj_center_x = v['x']
+                        proj_center_y = v['y']
+                        proj_radius = v['radius']
+                        
+                        if (proj_center_x + proj_radius > obj.x and 
+                            proj_center_x - proj_radius < obj.x + obj.width and
+                            proj_center_y + proj_radius > obj.y and 
+                            proj_center_y - proj_radius < obj.y + obj.height):
+                            obj.is_active = False
+                            app.enemies_killed += 1  
+                            if v in app.projectiles:
+                                app.projectiles.remove(v)
+                            break
 
         
         if app.camera_mode == 0:
@@ -660,18 +730,10 @@ def onStep(app):
             #cursor_x, cursor_y = app.gaze_x, app.gaze_y
             #is_pinching = app.mouse_pressed
 
-        
-        # else:
-        #     if app.vision.hand_x is not None and app.vision.hand_y is not None:
-        #         #cursor_x, cursor_y = app.vision.hand_x, app.vision.hand_y
-        #         #is_pinching = (app.vision.hand_gesture == 'PINCH')
-        #     else:
-        #         cursor_x, cursor_y = app.mouse_x, app.mouse_y
-        #         is_pinching = app.mouse_pressed
-
         for target in app.demo_targets:
             if target.flash_timer > 0:
                 target.flash_timer -= 1
+        
             
 
 def onMouseMove(app, mouseX, mouseY):
@@ -680,6 +742,12 @@ def onMouseMove(app, mouseX, mouseY):
 
 def onMousePress(app, mouseX, mouseY):
     app.mouse_pressed = True
+    if app.state == 'gameover':
+        cx = app.width / 2
+        if cx - 180 <= mouseX <= cx + 180 and 610 <= mouseY <= 660:
+            restart_game(app)
+        elif cx - 180 <= mouseX <= cx + 180 and 680 <= mouseY <= 730:
+            app.state = 'menu'
 
 
 def onMouseRelease(app, mouseX, mouseY):
@@ -721,9 +789,38 @@ def onKeyPress(app, key):
                     'radius': app.player.projectile_size
                 }
                 app.projectiles.append(projectile)
-                app.player.fire_rate = 10  
-        
+                app.player.fire_rate = 10
+                
+                bullet_x = app.player.x + app.player.width
+                bullet_y = app.player.y + app.player.height / 2 - 3
+                app.bullets.append(Bullet(bullet_x, bullet_y))
 
+    elif app.state == 'gameover':
+        if key == 'r':
+            restart_game(app)
+        elif key == 'm':
+            app.state = 'menu'
+            app.player.hp = app.player.max_hp  # Reset HP when going to menu
+            app.character.x, app.character.y = 830, 600  # Reset character position to avoid triggering game start
+
+def drawGameOver(app):
+    drawRect(0, 0, app.width, app.height, fill='black', opacity=85)
+    
+    cx = app.width / 2
+    
+
+    box_w, box_h = 460, 230
+    box_x, box_y = cx - box_w / 2, 300
+    
+    drawLabel("STATS", cx, box_y + 35, fill='cyan', size=22, bold=True, font='monospace')
+    
+    drawLabel(f"Distance Reached : {int(app.distance)} m", cx, box_y + 85, fill='white', size=18, font='monospace')
+    drawLabel(f"Enemies Defeated : {app.enemies_killed}", cx, box_y + 125, fill='white', size=18, font='monospace')
+    drawLabel(f"Survival Time    : {int(app.survival_time)} s", cx, box_y + 165, fill='white', size=18, font='monospace')
+    
+    drawLabel("[ R ] RESTART MISSION", cx, 635, fill='white', size=18, bold=True, font='monospace')
+    
+    drawLabel("[ M ] RETURN TO MAIN MENU", cx, 705, fill='white', size=18, bold=True, font='monospace')
 
 def onKeyHold(app, keys):
     if app.state == 'menu':
@@ -752,6 +849,12 @@ def onKeyHold(app, keys):
                         if not app.fenced:
                             app.msg_need_ca = 'please go to the fence to finish the lab'
                         else:
+                            app.state = 'game'
+                    if v == app.rightest_upper_building:
+                        if not app.fenced:
+                            app.msg_need_ca = 'please go to the fence to finish the lab'
+                        else:
+                            app.insideGame = 'tutorial'
                             app.state = 'game'
 
 
@@ -848,18 +951,26 @@ def redrawAll(app):
             drawCircle(hx, hy, 16, fill=cursor_color, opacity=70)
             drawCircle(hx, hy, 24, fill=None, border=cursor_color)
             drawLabel(f"Gesture: {app.vision.hand_gesture}", hx, hy + 35, fill=cursor_color, size=13, bold=True)
-    elif app.state == 'game':
+    elif app.state in ('game', 'gameover'):
         app.bg.draw(app)
+        drawLabel(f"HP: {app.player.hp}/{app.player.max_hp}", 80, 40, fill='red', size=24, bold=True, font='monospace')
+        drawLabel(f"Distance: {int(app.distance)}m", 240, 40, fill='cyan', size=24, bold=True, font='monospace')
+        
 
         app.player.draw(app)
+        
+        if app.camera_mode == 2:
+            for b in app.bullets:
+                b.draw(app)
+        
+        if app.camera_mode == 1:
+            for proj in app.projectiles:
+                drawCircle(proj['x'], proj['y'], proj['radius'], fill='yellow')
 
         if app.insideGame == 'tutorial': ##remember if not
             app.tutorial.draw(app)
         elif app.insideGame == 'smart':
             app.smart_map.draw(app)
-        
-        for proj in app.projectiles:
-            drawCircle(proj['x'], proj['y'], proj['radius'], fill='yellow')
         
         #this button animation written by ai
         mode_btn_x, mode_btn_y = app.width - 220, 200
@@ -922,6 +1033,8 @@ def redrawAll(app):
             drawLabel("A/D = DASH LEFT/RIGHT", 100, hint_y + 25, fill='orange', size=12, bold=True)
             drawLabel("F = SHOOT", 100, hint_y + 50, fill='red', size=12, bold=True)
             drawLabel(f"Weapon Level: {app.player.weapon_level}/{app.player.max_weapon_level}", 100, hint_y + 75, fill='gold', size=12, bold=True)
+        if app.state == 'gameover':
+                drawGameOver(app)
 
 
 def onAppStop(app):
