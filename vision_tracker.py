@@ -5,7 +5,8 @@ import traceback
 import mediapipe as mp
 import eye_tracker
 from hand_tracker import HandGestureRecognizer
-
+#decerase confidence level
+#keyboarda
 class VisionData:
     def __init__(self):
         self.raw_vx = None

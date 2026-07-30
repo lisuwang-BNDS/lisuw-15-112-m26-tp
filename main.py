@@ -16,6 +16,20 @@
 #get a plot in the begining of the game
 
 
+#---------------------------------
+#tp2 and tonight
+
+#adjustment on eye and hand 
+
+#smartmap
+#---
+#finish smart map
+#improving (tracler, gyuide, ui, sprites), UI UX
+#OH 4:30 - 7 :00
+#google slides _image or label, guides . one guide be slide
+#
+
+
 import io
 import time
 import os
@@ -204,6 +218,13 @@ class Player:
         self.is_dashing = False
         self.dash_direction = 1  
         self.state = 'run' #for future animation and so ( run jump fall dash slide...)
+        
+        
+        self.weapon_level = 1
+        self.max_weapon_level = 3
+        self.projectile_speed = 15
+        self.projectile_size = 5
+        self.fire_rate = 0  
 
     def get_rect(self):
             return (self.x, self.y, self.width, self.height)
@@ -225,6 +246,14 @@ class Player:
             self.dash_direction = direction
             self.dash_cooldown = self.dash_max_cooldown
             self.state = 'dash'
+
+    def upgrade_weapon(self):
+        if self.weapon_level < self.max_weapon_level:
+            self.weapon_level += 1
+            self.projectile_speed += 5
+            self.projectile_size += 2
+            return True
+        return False
 
 
     def update(self, current_ground = 900):
@@ -388,7 +417,7 @@ def onAppStart(app):
     app.player = Player(x=200, y=730, width=40, height=70)
 
     app.vision = VisionData()
-    app.camera_mode = 0  # 0: Eye, 1: Hand
+    app.camera_mode = 0  # 0: Eye, 1: Hand, 2: Keyboard
 
     app.gaze_x, app.gaze_y = None, None
 
@@ -479,6 +508,20 @@ def onAppStart(app):
     app.Switchcooldown = 0
     app.MaxCoolSwitch= 30  
     app.projectiles = [] 
+    
+    
+    app.jump_zone = (100, app.height - 150, 120, 100)  
+    app.eye_jump_progress = 0.0
+    app.eye_dash_progress = 0.0
+    app.hand_jump_cooldown = 0
+    app.hand_dash_cooldown = 0
+    
+    app.eye_history = []  
+    app.eye_history_max = 30  
+    app.special_skill_ready = False
+    app.eye_skill_cooldown = 0
+    
+    app.aim_trajectory = None
 
     app.vision_thread = VisionTrackerThread(app)
     app.vision_thread.start()
@@ -503,7 +546,7 @@ def onStep(app):
             
                 app.tutorial.check_collisions(app.player, app)
             else:
-                pass #normal game
+                pass 
             
             if app.Switchcooldown == 0:
                 x, y, w, h = app.modeSwitch
@@ -512,64 +555,82 @@ def onStep(app):
                         if x <= app.gaze_x <= x + w and y <= app.gaze_y <= y + h:
                             app.camera_mode = 1 
                             app.Switchcooldown = app.MaxCoolSwitch
-                else:
+                elif app.camera_mode == 1:
                     if app.vision.hand_gesture == 'PINCH' and app.vision.hand_x != None:
                         if x <= app.vision.hand_x <= x + w and y <= app.vision.hand_y <= y + h:
-                            app.camera_mode = 0  
+                            app.camera_mode = 2  
                             app.Switchcooldown = app.MaxCoolSwitch
+                else:  
+                    pass  # Keyboard mode 
             else:
                 app.Switchcooldown -= 1
             
             if app.camera_mode == 0:
                 if app.gaze_x != None and app.gaze_y != None:
-                    Screeny = app.height / 2
-                    Screenx = app.width / 2
-                    if app.gaze_y < Screeny - 100: 
-                        if app.player.jumps_remaining > 0:
-                            app.player.jump()
-                    elif app.gaze_y > Screeny + 100:
-                        app.player.vy += 2
+                   #this relative position algorithm is inspired and designed by gemini flash
+                    app.eye_history.append((app.gaze_x, app.gaze_y))
+                    if len(app.eye_history) > app.eye_history_max:
+                        app.eye_history.pop(0)
+                    if len(app.eye_history) >= 10 and app.eye_skill_cooldown == 0:
+                        recent_x = [p[0] for p in app.eye_history[-10:]]
+                        x_range = max(recent_x) - min(recent_x)
+                        if x_range > 125:
+                            app.special_skill_ready = True
+                            app.eye_skill_cooldown = 60 
                     
-                    if app.gaze_x < Screenx - 100:
-                        app.player.x -= 5
-                    elif app.gaze_x > Screenx + 100:
-                        app.player.x += 5
-            else:
-                if app.vision.hand_x != None and app.vision.hand_y != None:
-                    Screeny = app.height / 2
-                    Screenx = app.width / 2
-                    if app.vision.hand_y < Screeny - 100:
-                        if app.player.jumps_remaining > 0:
-                            app.player.jump() 
-                    elif app.vision.hand_y > Screeny + 100:
-                        app.player.vy += 2
+                    if app.special_skill_ready and app.eye_skill_cooldown == 0:
+                        Screenx = app.width / 2
+                        Screeny = app.height / 2
+                        if abs(app.gaze_x - Screenx) < 150 and abs(app.gaze_y - Screeny) < 150:
+                            if app.player.upgrade_weapon():
+                                app.special_skill_ready = False
+                                app.eye_skill_cooldown = 120  
                     
-                    if app.vision.hand_x < Screenx  - 100:
-                        app.player.x -= 5
-                    elif app.vision.hand_x > Screenx  + 100:
-                        app.player.x += 5
-                    
-                    if app.vision.hand_gesture == 'PINCH': #DOUBLE JUMPPPPPP
-                        if app.player.jumps_remaining > 0:
-                            app.player.jump()
-                    elif app.vision.hand_gesture == 'PISTOL_AIM':
-                    
-                        direction = 1 if app.vision.hand_x > Screenx else -1
-                        #aim the direction !!! continue to write
-
-                    elif app.vision.hand_gesture == 'PISTOL_FIRE':
-                        if app.vision.hand_x != None and app.vision.hand_y != None:
-                          
-                            projectile = {'x': app.player.x + app.player.width / 2, 'y': app.player.y + app.player.height / 2, 'vx': (app.vision.hand_x - app.player.x) / 20, 
-                                'vy': (app.vision.hand_y - app.player.y) / 20,
-                                'speed': 15,
-                                'radius': 5
-                            }
-                            dist = (projectile['vx']**2 + projectile['vy']**2) ** 0.5
-                            if dist > 0:
-                                projectile['vx'] = (projectile['vx'] / dist) * projectile['speed']
-                                projectile['vy'] = (projectile['vy'] / dist) * projectile['speed']
-                            app.projectiles.append(projectile)
+                    if app.eye_skill_cooldown > 0:
+                        app.eye_skill_cooldown -= 1
+            elif app.camera_mode == 1:
+                if app.hand_jump_cooldown > 0:
+                    app.hand_jump_cooldown -= 1
+                if app.hand_dash_cooldown > 0:
+                    app.hand_dash_cooldown -= 1
+                if app.vision.hand_gesture == 'PINCH' and app.hand_jump_cooldown == 0:
+                    if app.player.jumps_remaining > 0:
+                        app.player.jump()
+                        app.hand_jump_cooldown = 20  
+                if app.vision.hand_gesture == 'FIST' and app.hand_dash_cooldown == 0:
+                    if app.player.dash_cooldown == 0:
+                        direction = 1 if app.vision.hand_x > app.width / 2 else -1
+                        app.player.dash(direction)
+                        app.hand_dash_cooldown = 25
+                if app.vision.hand_gesture == 'PISTOL_AIM' and app.vision.hand_x != None and app.vision.hand_y != None:
+                    start_x = app.player.x + app.player.width / 2
+                    start_y = app.player.y + app.player.height / 2
+                    vx = (app.vision.hand_x - app.player.x) / 20
+                    vy = (app.vision.hand_y - app.player.y) / 20
+                    dist = (vx**2 + vy**2) ** 0.5
+                    if dist > 0:
+                        vx = (vx / dist) * app.player.projectile_speed
+                        vy = (vy / dist) * app.player.projectile_speed
+                    app.aim_trajectory = {'start': (start_x, start_y), 'velocity': (vx, vy)}
+                else:
+                    app.aim_trajectory = None
+                
+                if app.vision.hand_gesture == 'PISTOL_FIRE':
+                    if app.vision.hand_x != None and app.vision.hand_y != None:
+                        projectile = {'x': app.player.x + app.player.width / 2, 'y': app.player.y + app.player.height / 2, 'vx': (app.vision.hand_x - app.player.x) / 20, 
+                            'vy': (app.vision.hand_y - app.player.y) / 20,
+                            'speed': app.player.projectile_speed,
+                            'radius': app.player.projectile_size
+                        }
+                        dist = (projectile['vx']**2 + projectile['vy']**2) ** 0.5
+                        if dist > 0:
+                            projectile['vx'] = (projectile['vx'] / dist) * projectile['speed']
+                            projectile['vy'] = (projectile['vy'] / dist) * projectile['speed']
+                        app.projectiles.append(projectile)
+            elif app.camera_mode == 2:
+                if app.player.fire_rate > 0:
+                    app.player.fire_rate -= 1
+                
             
             for v in app.projectiles[:]:
                 v['x'] += v['vx']
@@ -642,15 +703,24 @@ def onKeyPress(app, key):
         if key in ['b', 'escape']:
             app.state = 'menu'
         elif key == 'space':
-            
             if app.state == 'game':
                 app.player.jump()
-        elif key == 's': ############
-            app.camera_mode = 1 - app.camera_mode
+        elif key == 's':
+            app.camera_mode = (app.camera_mode + 1) % 3  
         elif key == 'd' and app.state == 'game':
             app.player.dash(1)
         elif key == 'a' and app.state == 'game':
             app.player.dash(-1)
+        elif key == 'f' and app.state == 'game' and app.camera_mode == 2:
+            #
+            if app.player.fire_rate == 0:
+                projectile = {'x': app.player.x + app.player.width / 2, 'y': app.player.y + app.player.height / 2, 
+                    'vx': app.player.projectile_speed, 'vy': 0,
+                    'speed': app.player.projectile_speed,
+                    'radius': app.player.projectile_size
+                }
+                app.projectiles.append(projectile)
+                app.player.fire_rate = 10  
         
 
 
@@ -791,26 +861,64 @@ def redrawAll(app):
         #this button animation written by ai
         mode_btn_x, mode_btn_y = app.width - 220, 200
         mode_btn_w, mode_btn_h = 200, 50
-        mode_color = 'cyan' if app.camera_mode == 0 else 'magenta'
+        mode_color = 'cyan' if app.camera_mode == 0 else 'magenta' if app.camera_mode == 1 else 'lime'
         drawRect(mode_btn_x, mode_btn_y, mode_btn_w, mode_btn_h, fill=mode_color, opacity=80, border='white')
-        mode_text = "EYE MODE" if app.camera_mode == 0 else "HAND MODE"
+        mode_text = "EYE MODE" if app.camera_mode == 0 else "HAND MODE" if app.camera_mode == 1 else "KEYBOARD"
         drawLabel(mode_text, mode_btn_x + mode_btn_w//2, mode_btn_y + mode_btn_h//2, fill='white', size=14, bold=True)
-        drawLabel("Look/Pinch to switch", mode_btn_x + mode_btn_w//2, mode_btn_y + mode_btn_h + 15, fill='gray', size=10)
+        drawLabel("Look/Pinch/'S' to switch", mode_btn_x + mode_btn_w//2, mode_btn_y + mode_btn_h + 15, fill='gray', size=10)
         
         if app.camera_mode == 0:
+            skill_color = 'gold' if app.special_skill_ready else 'gray'
+            skill_text = "SKILL READY!" if app.special_skill_ready else "SKILL CHARGING..."
+            
+            drawRect(app.width/2 - 100, app.height - 80, 200, 40, fill=skill_color, opacity=30, border=skill_color, borderWidth=2)
+            drawLabel(skill_text, app.width/2, app.height - 60, fill=skill_color, size=14, bold=True)
+            
+            if app.eye_skill_cooldown > 0:
+                cooldown_pct = app.eye_skill_cooldown / 120
+                drawRect(app.width/2 - 100, app.height - 80, 200 * cooldown_pct, 40, fill='red', opacity=50)
+            
+            if len(app.eye_history) >= 2:
+                for i in range(len(app.eye_history) - 1):
+                    x1, y1 = app.eye_history[i]
+                    x2, y2 = app.eye_history[i + 1]
+                    alpha = int(100 * (i / len(app.eye_history)))
+                    alpha = min(100,alpha)
+                    drawLine(x1, y1, x2, y2, fill='cyan', opacity=alpha)
+            
             if app.gaze_x is not None and app.gaze_y is not None:
-                drawCircle(app.gaze_x, app.gaze_y, 20, fill='cyan', opacity=50)  
+                cursor_color = 'gold' if app.special_skill_ready else 'cyan'
+                drawCircle(app.gaze_x, app.gaze_y, 20, fill=cursor_color, opacity=50)  
                 drawCircle(app.gaze_x, app.gaze_y, 8, fill='white')
-                drawLabel(f"Eye: ({int(app.gaze_x)}, {int(app.gaze_y)})", app.gaze_x, app.gaze_y + 35, fill='cyan', size=11)
-        else:
-            hx = app.vision.hand_x if app.vision.hand_x is not None else app.mouse_x
-            hy = app.vision.hand_y if app.vision.hand_y is not None else app.mouse_y
-            cursor_color = 'lime' if (app.vision.hand_gesture == 'PINCH' or app.mouse_pressed) else 'magenta'
-            drawCircle(hx, hy, 16, fill=cursor_color, opacity=70)
-            drawCircle(hx, hy, 24, fill=None, border=cursor_color)
-            drawLabel(f"Hand: ({int(hx)}, {int(hy)})", hx, hy + 35, fill=cursor_color, size=11)
-            drawLabel(f"Gesture: {app.vision.hand_gesture}", hx, hy + 50, fill=cursor_color, size=11, bold=True)
-        
+            
+            drawLabel("Move eyes LEFT-RIGHT rapidly to charge, look CENTER to upgrade WEAPON", app.width/2, app.height - 30, fill='gray', size=11)
+        elif app.camera_mode == 1:
+        #     hint_y = app.height - 120
+        #     drawLabel("PINCH = JUMP", 100, hint_y, fill='lime', size=12, bold=True)
+        #     drawLabel("FIST = DASH", 100, hint_y + 25, fill='orange', size=12, bold=True)
+        #     drawLabel("PISTOL AIM = TRAJECTORY", 100, hint_y + 50, fill='cyan', size=12, bold=True)
+        #     drawLabel("PISTOL FIRE = SHOOT", 100, hint_y + 75, fill='red', size=12, bold=True)
+            
+             
+            if app.aim_trajectory:
+                start_x, start_y = app.aim_trajectory['start']
+                vx, vy = app.aim_trajectory['velocity']
+                print('drawtra')
+                drawLine(start_x,start_y,start_x + vx*60, start_y + vy*60, dashes = True)
+                
+            
+            if app.vision.hand_x is not None and app.vision.hand_y is not None:
+                print('vvvvvv')
+                cursor_color = 'lime' if app.vision.hand_gesture == 'PINCH' else 'orange' if app.vision.hand_gesture == 'FIST' else 'cyan' if app.vision.hand_gesture == 'PISTOL_AIM' else 'red' if app.vision.hand_gesture == 'PISTOL_FIRE' else 'magenta'
+                drawCircle(app.vision.hand_x, app.vision.hand_y, 20, fill=cursor_color, opacity=50)
+                drawCircle(app.vision.hand_x, app.vision.hand_y, 8, fill='white')
+                drawLabel(f"Gesture: {app.vision.hand_gesture}", app.vision.hand_x, app.vision.hand_y + 35, fill=cursor_color, size=11, bold=True)
+        else:  
+            hint_y = app.height - 120
+            drawLabel("SPACE = JUMP", 100, hint_y, fill='lime', size=12, bold=True)
+            drawLabel("A/D = DASH LEFT/RIGHT", 100, hint_y + 25, fill='orange', size=12, bold=True)
+            drawLabel("F = SHOOT", 100, hint_y + 50, fill='red', size=12, bold=True)
+            drawLabel(f"Weapon Level: {app.player.weapon_level}/{app.player.max_weapon_level}", 100, hint_y + 75, fill='gold', size=12, bold=True)
 
 
 def onAppStop(app):

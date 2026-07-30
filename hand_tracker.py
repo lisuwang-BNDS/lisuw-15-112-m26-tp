@@ -100,64 +100,10 @@ class HandGestureRecognizer:
 
         if states[1]:
             return screen_x, screen_y, 'POINT'
+        
+        if not any(states):
+            return screen_x, screen_y, 'FIST'
 
         return screen_x, screen_y, 'NONE'
 
 
-# # =========================================================================
-# # 🧪 独立单文件测试入口 (运行 python hand_tracker.py 可单独调取摄像头测试)
-# # =========================================================================
-# if __name__ == '__main__':
-#     print("\n" + "="*50)
-#     print("🚀 启动 Hand Tracker 独立测试模式...")
-#     print("按 'q' 键退出测试。")
-#     print("="*50 + "\n")
-
-#     cap = cv2.VideoCapture(0)
-#     if not cap.isOpened():
-#         print("❌ 错误：无法打开摄像头！")
-#         exit()
-
-#     hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.7)
-#     recognizer = HandGestureRecognizer()
-
-#     while True:
-#         ret, frame = cap.read()
-#         if not ret:
-#             break
-
-#         frame = cv2.flip(frame, 1)
-#         h, w, _ = frame.shape
-#         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#         results = hands.process(rgb_frame)
-
-#         current_gesture = "NONE"
-#         pos_x, pos_y = 0, 0
-
-#         if results.multi_hand_landmarks:
-#             for hand_landmarks in results.multi_hand_landmarks:
-#                 mp_drawing.draw_landmarks(
-#                     frame, hand_landmarks, mp_hands.HAND_CONNECTIONS,
-#                     mp_drawing_styles.get_default_hand_landmarks_style(),
-#                     mp_drawing_styles.get_default_hand_connections_style()
-#                 )
-#                 landmarks = hand_landmarks.landmark
-#                 pos_x, pos_y, current_gesture = recognizer.process_hand_gesture(landmarks, w, h)
-
-#                 # 绘制视觉反馈
-#                 if 'PISTOL' in current_gesture:
-#                     color = (0, 0, 255) if current_gesture == 'PISTOL_FIRE' else (255, 0, 255)
-#                     cv2.circle(frame, (pos_x, pos_y), 15, color, 2)
-#                 else:
-#                     cv2.circle(frame, (pos_x, pos_y), 8, (0, 255, 0), -1)
-
-#         # 打印当前手势状态
-#         cv2.putText(frame, f"Gesture: {current_gesture}", (20, 40),
-#                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-
-#         cv2.imshow("Hand Tracker Test", frame)
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
-
-#     cap.release()
-#     cv2.destroyAllWindows()

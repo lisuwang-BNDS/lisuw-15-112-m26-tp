@@ -578,6 +578,21 @@ class TutorialLevel:
 #simple harded only one jump eye and hand , double jumop and dash 
 
 #rand0om just do regular 
+class DifPool:
+    def __init__(self):
+        dif ={
+            'easy':
+            {'Basic Platforms', },
+           'mid':
+            {'Crumbling Platforms', 'Bouncy Platforms'},
+            'hard':
+            { 'Moving Platforms','Springs'},
+             'collect':
+              {'Coins','Gems','Health Packs'},
+            'enemy':{'Spikes','Ground Enemies','Flying Enemies'}
+            #end is the gazedoor
+
+        }
 
 #UI... UX
 class MapGenerator:
@@ -592,7 +607,7 @@ class MapGenerator:
         self.had.append(startPlatform)
         
     def difficulty(self):
-        return min(1.0, self.sumDist / 10000)
+        pass #difficulty 
 
     def update(self, speed, app):
         self.sumDist += speed
@@ -605,4 +620,8 @@ class MapGenerator:
             self.gen(diff, app)
     def gen(self,diff,app):
         pass
-    
+        
+
+#same with jumpping and dash, max length, double jump max h, dash max x, _____range depends on difficulty. On of diffcult move per move
+#acheive. poools diff combination . key 
+#new-complexity, backtracking?
