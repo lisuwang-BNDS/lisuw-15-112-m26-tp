@@ -578,21 +578,7 @@ class TutorialLevel:
 #simple harded only one jump eye and hand , double jumop and dash 
 
 #rand0om just do regular 
-class DifPool:
-    def __init__(self):
-        dif ={
-            'easy':
-            {'Basic Platforms', },
-           'mid':
-            {'Crumbling Platforms', 'Bouncy Platforms'},
-            'hard':
-            { 'Moving Platforms','Springs'},
-             'collect':
-              {'Coins','Gems','Health Packs'},
-            'enemy':{'Spikes','Ground Enemies','Flying Enemies'}
-            #end is the gazedoor
 
-        }
 
 #UI... UX
 
@@ -639,7 +625,38 @@ class RecursiveSmartMapGenerator:
             self.last_x = failed.x + failed.width
             self.last_y = failed.y 
             self.last_width = failed.width
-        
 
+    def _BackTrac(self, curX, curY, curW, depth, MaxDepth, diff):
+        if depth >= MaxDepth:
+            return [] #base case, find the road
+        else:
+            potential = self._GetJumpPoten(diff)
+            random.shuffle(potential)
+            for dx,dy, width, Plats in potential:
+                nextX = curX + dx
+                nextY = curY + dy
+                if self._isLegal(nextY, Plats, diff):
+                    plat = self._makePlat(Plats, nextX, nextY, width, diff)
+                    things = self._makeThing(plat, diff)
+                    possibleSol = self._BackTrac(nextX + width, nextY, width, depth + 1,MaxDepth, diff)
+                    if possibleSol != None:
+                        return [(plat, things)] + possibleSol
+            return None
+    def _GetJumpPoten(self,diff):
+        potential = [(random.randint(120, 200), random.randint(-60, 60), random.randint(160, 260), Platform),
+            (random.randint(160, 240), random.randint(-100, 40), random.randint(140, 220), Platform)]
+        if diff  > 0.3:
+            potential.append((random.randint(180, 280), random.randint(-80, 80), random.randint(120, 180), MovingPlatform))
+            potential.append((random.randint(150, 220), random.randint(-40, 40), random.randint(120, 180), CrumblingPlatform))
+        if diff > 0.5:
+            potential.append((random.randint(220, 320), random.randint(-160, -60), random.randint(100, 160), Spring))
+            potential.append((random.randint(200, 300), random.randint(-80, 80), random.randint(100, 160), BouncyPlatform))
+        return potential
 
-
+    def _isLegal(self, y, Plats, diff):
+        pass
+    def _makePlat(self,Plats, nextX,nextY,width,diff):
+        pass
+    def _makeThing(self,plat,diff):
+        pass
+    
