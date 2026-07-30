@@ -109,43 +109,6 @@ class CrumblingPlatform(Platform):
 
 
 
-
-#gemini flash helped with debug
-class GazeDoor(Platform):
-    def __init__(self, x, y, width, height):
-        super().__init__(x,y,width,height)
-        self.progress = 0.0 
-        self.is_unlocked = False
-        
-
-    def check_interaction(self,x, y, is_pinching=False, mode=0):
-        if self.is_unlocked or x is None or y is None:
-            return
-        
-        cx, cy = self.x + self.width / 2, self.y + self.height / 2
-        dist = ((x - cx)**2 + ( y - cy)**2)**0.5
-        
-        if dist < max(self.width, self.height): 
-            if mode == 0:  
-                self.progress = min(1.0, self.progress + 0.08)
-            else:       
-                if is_pinching:
-                    self.progress = min(1.0, self.progress + 0.08)
-        else:
-            self.progress = max(0.0, self.progress - 0.02)
-
-        if self.progress >= 1.0:
-            self.is_unlocked = True
-            self.is_active = False  
-
-    def draw(self, app):
-        if self.is_unlocked: return
-        drawRect(self.x, self.y, self.width, self.height, fill='magenta', border='cyan', borderWidth=3, opacity=80)
-        if self.progress > 0:
-            dw = self.width * self.progress
-            drawRect(self.x, self.y - 15, dw, 8, fill='lime')
-        drawLabel("LOOK / PINCH TO UNLOCK", self.x + self.width/2, self.y + self.height/2, fill='white', size=11, bold=True)
-
 class Obstacle(GameObject):
 
     def __init__(self, x, y, width, height, damage=1):
@@ -160,7 +123,7 @@ class Spike(Obstacle):
         self.x -= game_speed
     
     def draw(self, app):
-        drawPolygon(self.x,self.y, self.width, 3, fill='red')
+        drawRect(self.x,self.y, self.width, 3, fill='red')
     
 class Enemy(Obstacle):
     def __init__(self, x, y, width=40, height=60, patrol_range=100):
@@ -169,14 +132,25 @@ class Enemy(Obstacle):
         self.patrol_range = patrol_range
         self.direction = 1
         self.speed = 2
+        self.hp = 3  
+        self.max_hp = 3
     
     def update(self, game_speed, app):
         self.base_x -= game_speed
         #for pistol
         self.x = self.base_x + math.sin(app.stepsPerSecond * 0.05) * self.patrol_range
     
+    def take_damage(self, damage=1):
+        self.hp -= damage
+        return self.hp <= 0
+    
     def draw(self, app):
         drawRect(self.x, self.y, self.width, self.height, fill='purple')
+    
+        if self.hp < self.max_hp:
+            hp_bar_width = self.width * (self.hp / self.max_hp)
+            drawRect(self.x, self.y - 10, hp_bar_width, 5, fill='red')
+            drawRect(self.x, self.y - 10, self.width, 5, fill='gray', border='black')
 
 
 class FlyingEnemy(Obstacle):
@@ -185,6 +159,8 @@ class FlyingEnemy(Obstacle):
         self.base_y = y
         self.base_x = x
         self.wing_angle = 0
+        self.hp = 2  # Flying enemies have less HP - takes 2 hits to kill
+        self.max_hp = 2
     
     def update(self, game_speed, app):
         self.base_x -= game_speed
@@ -192,11 +168,20 @@ class FlyingEnemy(Obstacle):
         self.y = self.base_y + math.sin(app.stepsPerSecond * 0.1) * 30
         self.wing_angle += 0.3
     
+    def take_damage(self, damage=1):
+        self.hp -= damage
+        return self.hp <= 0
+    
     def draw(self, app):
         drawCircle(self.x + self.width/2, self.y + self.height/2, 15, fill='darkGreen')
         wing = math.sin(self.wing_angle) * 10
         drawOval(self.x - 10, self.y + wing, 20, 10, fill='lime')
         drawOval(self.x + self.width - 10, self.y + wing, 20, 10, fill='lime')
+        # Draw HP bar
+        if self.hp < self.max_hp:
+            hp_bar_width = self.width * (self.hp / self.max_hp)
+            drawRect(self.x, self.y - 10, hp_bar_width, 5, fill='red')
+            drawRect(self.x, self.y - 10, self.width, 5, fill='gray', border='black')
 
         
 
@@ -238,7 +223,7 @@ class Gem(Collectible):
         if self.collected:
             return
         
-        drawPolygon(self.x,self.y,12, 4, fill=self.color)
+        drawRect(self.x,self.y,self.width, self.height,fill = 'cyan')
 
 
 class HealthPack(Collectible):
@@ -248,7 +233,8 @@ class HealthPack(Collectible):
     def draw(self, app):
         if self.collected:
             return
-        drawRect(self.x , self.y, 20, 30, fill='red')
+        drawRect(self.x, self.y, self.width, self.height, fill='white', border='red', borderWidth=2)
+        
 
 
 #the following two platform's function and features designed by gemini flash 
@@ -432,7 +418,7 @@ class TutorialLevel:
                         'text': '',
                         'objects': [
                             Platform(400, 750, 200),
-                            GazeDoor(950, 650, 80, 100),
+                            Platform(950, 650, 80),
                             Platform(1150, 650, 200),
                         ]
                     },
@@ -462,8 +448,9 @@ class TutorialLevel:
                 self.text = '' #######
             for v in self.spawned[:]:
                 v.update(gamespeed,app)
-                if v.x < -200:
+                if not getattr(v, 'is_active', True) or v.x < -200:
                     self.spawned.remove(v)
+                
     def getanother(self,v,newX):
         classOfclone = v.__class__
         if classOfclone == Platform:
@@ -489,8 +476,6 @@ class TutorialLevel:
             return classOfclone(newX, v.y, v.color)
         elif classOfclone == HealthPack:
             return classOfclone(newX, v.y)
-        elif classOfclone == GazeDoor:
-            return classOfclone(newX, v.y, v.width, v.height)
         else:
             return classOfclone
 
@@ -502,6 +487,25 @@ class TutorialLevel:
             drawLabel(self.text,app.width//2, 75, fill ='white')
 
     def check_collisions(self,player,app):
+        # Bullet collision (keyboard mode only - uses HP system)
+        if hasattr(app, 'bullets') and app.camera_mode == 2:
+            for b in app.bullets[:]:
+                if not b.is_active:
+                    continue
+                for v in self.spawned:
+                    if getattr(v, 'is_active', True) and isinstance(v, (Enemy, FlyingEnemy)):
+           
+                        if b.collides_with(v):
+                            b.is_active = False    
+                            if b in app.bullets:
+                                app.bullets.remove(b)
+                            # Keyboard mode: use HP system (3 hits for enemy, 2 for flying)
+                            if v.take_damage():
+                                v.is_active = False
+                                print("Enemy defeated by keyboard bullet!")
+                            else:
+                                print(f"Enemy hit by keyboard bullet! HP: {v.hp}")
+                            break
         playerinfo = player.get_rect()
         playeIsOnPlat = False
         highestPl = float('inf')
@@ -510,11 +514,6 @@ class TutorialLevel:
         for v in self.spawned:
             if v.is_active == False:
                 continue
-            if isinstance(v, GazeDoor):
-                if v.collides_with(player):
-                    if hasattr(app, 'gaze_x') and hasattr(app, 'gaze_y'):
-                       v.check_interaction(app.gaze_x, app.gaze_y, is_pinching=(app.vision.hand_gesture == 'PINCH' if hasattr(app, 'vision') else False), mode=app.camera_mode if hasattr(app, 'camera_mode') else 0)
-            
             if isinstance(v, Platform):
                 if v.collides_with(player):
                     playerBot = player.y + player.height
@@ -600,11 +599,13 @@ class RecursiveSmartMapGenerator:
         self.sumDist += speed
         for v in self.spawned[:]:
             v.update(speed, app)
-            if getattr(v,'x',0) + getattr(v,'width', 50) < -300:
+            if not getattr(v, 'is_active', True) or getattr(v, 'x', 0) + getattr(v, 'width', 50) < -300:
                 self.spawned.remove(v)
+                
         self.last_x -= speed
         if self.last_x < app.width + 800:
             self.genChunkRec(app)
+
     def genChunkRec(self,app):
         diff = self.getDifficulty()
         path = self._BackTrac(self.last_x,self.last_y, self.last_width, 0, self.depthPertime, diff)
@@ -668,43 +669,62 @@ class RecursiveSmartMapGenerator:
         else:
             return Platform(nextX,nextY, width)
     
-    def _makeThing(self,plat,diff):
-        things = []
-        px, py, pw = plat.x, plat.y, plat.width
-        if random.random() < (0.2 + diff * 0.3) and pw >= 120:
-            tType = random.choice(['spike', 'enemy', 'gaze_door'])
-            if tType  == 'spike' and not isinstance(plat, (MovingPlatform, CrumblingPlatform)):
-                things.append(Spike(px + pw / 2 - 15, py - 30))
-            elif tType  == 'enemy' and pw >= 160:
-                things.append(Enemy(px + pw / 2, py - 60, patrol_range=min(60, pw // 4)))
-            elif tType  == 'gaze_door' and diff > 0.4:
-                things.append(GazeDoor(px + pw / 2 - 40, py - 100, 80, 100))
-        elif random.random() < 0.5:
-            item_type = random.choice(['coin', 'gem'])
-            if item_type == 'coin':
-                things.append(Coin(px + pw / 2, py - 35))
-            else:
-                things.append(Gem(px + pw / 2, py - 35))
+    def _makeThing(self, plat, diff):
+            things = []
+            px, py, pw = plat.x, plat.y, plat.width
+            if random.random() < (0.2 + diff * 0.3) and pw >= 120:
+                tType = random.choice(['spike', 'enemy', 'flying'])
                 
-        return things
+                if tType == 'spike' and not isinstance(plat, (MovingPlatform, CrumblingPlatform)):
+                    things.append(Spike(px + pw / 2 - 15, py - 30))
+                    
+                elif tType == 'enemy' and pw >= 160:
+                    things.append(Enemy(px + pw / 2, py - 60, patrol_range=min(60, pw // 4)))
+                    
+                elif tType == 'flying' and pw >= 120:
+                    things.append(FlyingEnemy(px + pw / 2 - 20, py - 100))
+                    
+            elif random.random() < 0.5:
+                item_type = random.choice(['coin', 'coin', 'gem', 'health'])
+                
+                if item_type == 'coin':
+                    things.append(Coin(px + pw / 2, py - 35))
+                elif item_type == 'gem':
+                    things.append(Gem(px + pw / 2, py - 35))
+                elif item_type == 'health':
+                    
+                    things.append(HealthPack(px + pw / 2 - 10, py - 35))
+                    
+            return things
     def draw(self, app):
         for v in self.spawned:
             if getattr(v, 'is_active', True):
                 v.draw(app)
     def checkCollision(self,player,app):
+        # Bullet collision (keyboard mode only - uses HP system)
+        if hasattr(app, 'bullets') and app.camera_mode == 2:
+            for b in app.bullets[:]:
+                if not b.is_active:
+                    continue
+                for v in self.spawned:
+                    if getattr(v, 'is_active', True) and isinstance(v, (Enemy, FlyingEnemy)):
+                        
+                        if b.collides_with(v):
+                            b.is_active = False 
+                            if b in app.bullets:
+                                app.bullets.remove(b)
+                            if v.take_damage():
+                                v.is_active = False
+                                print("Enemy defeated by keyboard bullet!")
+                            else:
+                                print(f"Enemy hit by keyboard bullet! HP: {v.hp}")
+                            break
         playerIsOnPlat = False
         highestPl = float('inf')
         landedPl = None
         for v in self.spawned:
             if not getattr(v, 'is_active', True):
                 continue
-            if isinstance(v, GazeDoor):
-                if v.collides_with(player):
-                    gaze_x = getattr(app, 'gaze_x', None)
-                    gaze_y = getattr(app, 'gaze_y', None)
-                    is_pinching = (app.vision.hand_gesture == 'PINCH') if hasattr(app, 'vision') else False
-                    camera_mode = getattr(app, 'camera_mode', 0)
-                    v.check_interaction(gaze_x, gaze_y, is_pinching=is_pinching, mode=camera_mode)
             if isinstance(v, Platform):
                 if v.collides_with(player):
                     playerBot = player.y + player.height
@@ -749,16 +769,13 @@ class RecursiveSmartMapGenerator:
             player.jumps_remaining = player.max_jumps 
             landedPl.on_player_stepped(player) 
         else:
-            print("detecting")
-            print(player.y)
             player.is_grounded = False
             if player.y >= 830:
-
-                print('Player fell into pit!')
                 if hasattr(player, 'hp'):
                     player.hp -= 1
-                    print(f"HP reduced to {player.hp}")
-                    self.respawnOnPlatform(player)
+                    if player.hp > 0:
+                        self.respawnOnPlatform(player)
+                    # If HP is 0, let the main game loop handle gameover
                 else:
                     player.x = 200
                     player.y = 300
@@ -766,22 +783,51 @@ class RecursiveSmartMapGenerator:
                     player.jumps_remaining = player.max_jumps
     
     def respawnOnPlatform(self, player):
-        platforms = [v for v in self.spawned if isinstance(v, Platform) and v.x > player.x]
+        platforms = [v for v in self.spawned if isinstance(v, Platform)]
         if platforms:
             platforms.sort(key=lambda p: p.x)
-            next_plat = platforms[0]
-            player.x = next_plat.x + next_plat.width / 2 - player.width / 2
-            player.y = next_plat.y - player.height
+            # Always use the first (leftmost) platform for safe respawn
+            first_plat = platforms[0]
+            # Drop player from high above the platform
+            player.x = first_plat.x + first_plat.width / 2 - player.width / 2
+            player.y = first_plat.y - 300  # Drop from 300px above platform
             player.vy = 0
-            player.is_grounded = True
-            player.ground_y = next_plat.y
+            player.is_grounded = False
             player.jumps_remaining = player.max_jumps
-            print(f"Respawned on platform at ({next_plat.x}, {next_plat.y}) with HP: {player.hp}")
         else:
+            # Drop from high above if no platform found
             player.x = 150
-            player.y = 750 - player.height
+            player.y = 450  # Drop from high above
             player.vy = 0
-            player.is_grounded = True
-            player.ground_y = 750
+            player.is_grounded = False
             player.jumps_remaining = player.max_jumps
-            print(f"Respawned at start with HP: {player.hp}")
+class Bullet(GameObject):
+    def __init__(self, x, y, speed=12, width=12, height=6, direction=1):
+        super().__init__(x, y, width, height)
+        self.speed = speed * direction
+        self.trail = []  # For trail effect
+    
+    def update(self, game_speed, app):
+        # Add current position to trail
+        self.trail.append((self.x, self.y))
+        if len(self.trail) > 5:
+            self.trail.pop(0)
+        
+        self.x += self.speed - game_speed
+        
+        if self.x > app.width + 100 or self.x < -50:
+            self.is_active = False
+
+    def draw(self, app):
+        if self.is_active:
+            for i, (tx, ty) in enumerate(self.trail):
+                alpha = int(255 * (i / len(self.trail)) * 0.5)
+                alpha = min(100, alpha)
+                trail_size = self.width * (i / len(self.trail))
+                if trail_size > 0:
+                    drawOval(tx, ty, trail_size, self.height, fill='orange', opacity=alpha)
+            
+            drawOval(self.x, self.y, self.width, self.height, fill='yellow', border='orange')
+         
+            drawOval(self.x - 2, self.y - 2, self.width + 4, self.height + 4, fill='gold', opacity=30)
+    
