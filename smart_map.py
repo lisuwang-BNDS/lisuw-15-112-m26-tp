@@ -595,33 +595,51 @@ class DifPool:
         }
 
 #UI... UX
-class MapGenerator:
-    def __init__(self, player):
-        self.had = []
-        self.player = player
-        self.sumDist = 0
-        self.lastX = 100
-        self.lastY = 750
-        self.lastW = 400
-        startPlatform = Platform(self.last_x, self.last_y, self.last_width)
-        self.had.append(startPlatform)
-        
-    def difficulty(self):
-        pass #difficulty 
-
-    def update(self, speed, app):
-        self.sumDist += speed
-        diff = self.difficulty()
-        for v in self.had[:]:
-            v.update(speed, app)
-            if hasattr(v, 'x') and v.x + getattr(v, 'width', 50) < -200:
-                self.had.remove(v)
-        if self.lastX < app.width + 600:
-            self.gen(diff, app)
-    def gen(self,diff,app):
-        pass
-        
 
 #same with jumpping and dash, max length, double jump max h, dash max x, _____range depends on difficulty. On of diffcult move per move
 #acheive. poools diff combination . key 
 #new-complexity, backtracking?
+
+class RecursiveSmartMapGenerator:
+    def __init__(self,player,depthPertime = 4):
+        self.player = player
+        self.spawned = []
+        self.sumDist = 0
+        self.depthPertime = depthPertime
+        self.last_y = 750
+        self.last_width = 400
+        start = Platform(0,750,400)
+        self.spawned.append(start)
+        self.last_x = 400
+    def getDifficulty(self):
+        return min(1.0, self.sumDist / 15000.0)
+    def update(self,speed,app):
+        self.sumDist += speed
+        for v in self.spawned[:]:
+            v.update(speed, app)
+            if getattr(v,'x',0) + getattr(v,'width', 50) < -300:
+                self.spawned.remove(v)
+        self.last_x -= speed
+        if self.last_x < app.width + 800:
+            self.genChunkRec(app)
+    def genChunkRec(self,app):
+        diff = self.getDifficulty()
+        path = self._BackTrac(self.last_x,self.last_y, self.last_width, 0, self.depthPertime, diff)
+        if path:
+            for plat, things in path:
+                self.spawned.append(plat)
+                for v in things:
+                    self.spawned.append(things)
+                self.last_x = plat.x  + plat.width
+                self.last_y = plat.y
+                self.last_width = plat.width
+        else:
+            failed = Platform(self.last_x + 150, 750, 300)
+            self.spawned.append(failed)
+            self.last_x = failed.x + failed.width
+            self.last_y = failed.y 
+            self.last_width = failed.width
+        
+
+
+
