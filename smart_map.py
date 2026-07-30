@@ -693,4 +693,69 @@ class RecursiveSmartMapGenerator:
             if getattr(v, 'is_active', True):
                 v.draw(app)
     def checkCollision(self,player,app):
-        pass
+        playerIsOnPlat = False
+        highestPl = 900
+        landedPl = None
+        for v in self.spawned:
+            if not getattr(v, 'is_active', True):
+                continue
+            if isinstance(v, GazeDoor):
+                if v.collides_with(player):
+                    gaze_x = getattr(app, 'gaze_x', None)
+                    gaze_y = getattr(app, 'gaze_y', None)
+                    is_pinching = (app.vision.hand_gesture == 'PINCH') if hasattr(app, 'vision') else False
+                    camera_mode = getattr(app, 'camera_mode', 0)
+                    v.check_interaction(gaze_x, gaze_y, is_pinching=is_pinching, mode=camera_mode)
+            if isinstance(v, Platform):
+                if v.collides_with(player):
+                    playerBot = player.y + player.height
+                    playerTop = player.y
+                    playerLeft = player.x
+                    playerRight = player.x + player.width
+                    playerLastBot = playerBot - player.vy
+                    playerLastTop = playerTop - player.vy
+                    if playerLastBot <= v.y + 10 and player.vy >= 0 and playerBot >= v.y:
+                        if v.y < highestPl:
+                            highestPl = v.y
+                            playerIsOnPlat = True
+                            landedPl = v
+                    
+                    elif playerLastTop >= v.y + v.height - 10 and player.vy < 0 and playerTop <= v.y + v.height:
+                        player.y = v.y + v.height
+                        player.vy = 0
+                    
+                    elif playerRight >= v.x and playerLeft < v.x:
+                        player.x = v.x - player.width
+                    elif playerLeft <= v.x + v.width and playerRight > v.x + v.width:
+                        player.x = v.x + v.width
+
+            elif isinstance(v, Collectible):
+                if v.collides_with(player) and not v.collected:
+                    v.on_collect(player)
+
+            elif isinstance(v, Obstacle):
+                if v.collides_with(player):
+                    if hasattr(player, 'hp'):
+                        player.hp -= v.damage
+                    else:
+                        player.y = 500
+                        player.vy = 0
+                        player.jumps_remaining = player.max_jumps
+
+        if playerIsOnPlat and landedPl:
+            player.y = highestPl - player.height
+            player.vy = 0
+            player.is_grounded = True
+            player.ground_y = highestPl
+            player.jumps_remaining = player.max_jumps 
+            landedPl.on_player_stepped(player) 
+        else:
+            if player.y + player.height >= 900:
+                player.y = 900 - player.height
+                player.vy = 0
+                player.is_grounded = True
+                player.ground_y = 900
+                player.jumps_remaining = player.max_jumps  
+            else:
+                player.is_grounded = False
+                player.ground_y = 900
