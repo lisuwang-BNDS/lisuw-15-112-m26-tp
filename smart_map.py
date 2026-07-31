@@ -300,6 +300,7 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 200),
                             Platform(950, 700, 200),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -308,27 +309,126 @@ class TutorialLevel:
                         'objects': [
                             MovingPlatform(400, 750, 150, move_range=80, vertical=True),
                             Platform(950, 700, 200),
+                            MovingPlatform(950, 700, 150, move_range=60, vertical=True),
+                            MovingPlatform(1500, 650, 150, move_range=100, vertical=True),
+                        ]
+                    },
+                    {
+                        'name': 'Crumbling Platforms',
+                        'text': '',
+                        'objects': [
+                            CrumblingPlatform(400, 750, 150),
+                            Platform(900, 700, 100),
+                            CrumblingPlatform(1300, 650, 150),
+                            Platform(1700, 600, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Bouncy Platforms',
+                        'text': '',
+                        'objects': [
+                            BouncyPlatform(400, 750, 150, bounciness=1.8),
+                            Platform(950, 650, 150),
+                            BouncyPlatform(1400, 550, 150, bounciness=2.0),
+                            Platform(1850, 450, 200),
                         ]
                     },
                     {
                         'name': 'Collectibles',
                         'text': 'Collect items to score points!',
+                        'name': 'Springs',
+                        'text': '',
+                        'objects': [
+                            Spring(450, 780, boost_power=-18),
+                            Platform(900, 650, 200),
+                            Spring(1350, 630, boost_power=-22),
+                            Platform(1800, 500, 200),
+                        ]
+                    },
+                    
+                    {
+                        'name': 'Collectibles - Coins',
+                        'text': '',
                         'objects': [
                             Platform(400, 750, 200),
                             Coin(450, 700),
+                            Coin(500, 700),
+                            Platform(950, 700, 200),
+                            Coin(1000, 650),
+                            Coin(1050, 650),
+                            Platform(1500, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Collectibles - Gems',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Gem(450, 700),
+                            Platform(950, 650, 200),
+                            Gem(1000, 600),
+                            Gem(1050, 600),
+                            Platform(1500, 550, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Health Packs',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            HealthPack(500, 700),
+                            Platform(950, 700, 200),
+                            HealthPack(1050, 650),
+                            Platform(1500, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Spikes',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Spike(500, 770),
                             Platform(950, 700, 200),
                             Gem(1000, 650),
+                            Spike(1050, 720),
+                            Spike(1100, 720),
+                            Platform(1500, 650, 200),
                         ]
                     },
                     {
                         'name': 'Enemies',
                         'text': 'Defeat enemies to survive!',
+                        'name': 'Ground Enemies',
+                        'text': '',
                         'objects': [
                             Platform(400, 750, 300),
                             Enemy(500, 690, patrol_range=80),
                             Platform(950, 700, 300),
+                            Enemy(1050, 640, patrol_range=100),
+                            Platform(1500, 650, 200),
                         ]
                     },
+                    {
+                        'name': 'Flying Enemies',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            FlyingEnemy(500, 600),
+                            Platform(950, 700, 200),
+                            FlyingEnemy(1050, 550),
+                            Platform(1500, 650, 200),
+                        ]
+                    },
+                    {
+                        'name': 'Gaze Doors',
+                        'text': '',
+                        'objects': [
+                            Platform(400, 750, 200),
+                            Platform(950, 650, 80),
+                            Platform(1150, 650, 200),
+                        ]
+                    },
+        
                 ]
 
 
@@ -712,6 +812,12 @@ class Bullet(GameObject):
         super().__init__(x, y, width, height)
         self.speed = speed * direction
         self.trail = []  # For trail effect
+        
+        # Animation placeholder (user to implement)
+        self.sprite_sheet = None
+        self.current_frame = 0
+        self.animation_timer = 0
+        self.animation_speed = 3
     
     def update(self, game_speed, app):
         # Add current position to trail
@@ -720,6 +826,13 @@ class Bullet(GameObject):
             self.trail.pop(0)
         
         self.x += self.speed - game_speed
+        
+        # Update animation (user to implement sprite sheet loading)
+        if self.sprite_sheet:
+            self.animation_timer += 1
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0
+                self.current_frame = (self.current_frame + 1) % self.sprite_sheet.rows
         
         if self.x > app.width + 100 or self.x < -50:
             self.is_active = False
@@ -732,6 +845,19 @@ class Bullet(GameObject):
                 trail_size = self.width * (i / len(self.trail))
                 if trail_size > 0:
                     drawOval(tx, ty, trail_size, self.height, fill='orange', opacity=alpha)
+            # Draw sprite if available (user to implement)
+            if self.sprite_sheet:
+                frame = self.sprite_sheet.getFrame(self.current_frame, 0)
+                drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
+                         width=self.width, height=self.height)
+            else:
+                # Fallback to trail effect
+                for i, (tx, ty) in enumerate(self.trail):
+                    alpha = int(255 * (i / len(self.trail)) * 0.5)
+                    alpha = min(100, alpha)
+                    trail_size = self.width * (i / len(self.trail))
+                    if trail_size > 0:
+                        drawOval(tx, ty, trail_size, self.height, fill='orange', opacity=alpha)
             
             drawOval(self.x, self.y, self.width, self.height, fill='yellow', border='orange')
          

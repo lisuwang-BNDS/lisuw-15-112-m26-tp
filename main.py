@@ -40,10 +40,9 @@ import random
 import eye_tracker
 from vision_tracker import VisionTrackerThread, VisionData
 from smart_map import TutorialLevel,RecursiveSmartMapGenerator, Bullet, Enemy, FlyingEnemy
+from sprite_system import SpriteSheet, AnimatedSprite
 from tutorial_story import TutorialStory
-
 Samplesize_need = 20
-
 class TutorialGuide:
     def __init__(self):
         self.current_step = 0
@@ -265,6 +264,8 @@ class Character: #this is the character for the starting page menu
     def move(self, dx, dy):
         self.x += dx
         self.y += dy
+        if self.sprite:
+            self.sprite.x = self.x
 
 class Player:
     def __init__(self,x,y,width = 40, height = 80):
@@ -275,6 +276,19 @@ class Player:
         self.vy = 0.0
         self.g = 1.5 # gravitational a, since on graphics + means down
         self.jump_power = -22
+        
+        self.animation_state = 'run'  # , run, jump, death, aim, dash
+        self.sprite_sheet = None
+        self.current_frame = 0
+        self.animation_timer = 0
+        self.animation_speed = 5
+        self.facing_direction = 1  # 1 = right, -1 = left
+        
+        self.jump_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/wake.png",5,1 )
+        self.death_sprite = SpriteSheet ("/Users/lisuwang/untitled folder/112Projec/assets/images/death.png", 6, 1)
+        self.aim_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/charge.png", 4,1)
+        self.dash_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/GAS dash with FX.png",7,1)
+        
         self.is_grounded = False
         self.ground_y = 900
         self.jumps_remaining = 2  
@@ -296,8 +310,50 @@ class Player:
         self.fire_rate = 0
 
         
-        self.hp = 3
-        self.max_hp = 3  
+        self.hp = 10
+        self.max_hp = 10
+    
+    def set_animation_state(self, state):
+        self.animation_state = state
+        self.current_frame = 0
+        self.animation_timer = 0
+    
+    
+    def update_animation(self):
+            
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            current_sprite = self.get_current_sprite()
+            if current_sprite:
+                self.current_frame = (self.current_frame + 1) % current_sprite.cols
+    
+    def get_current_sprite(self):
+        
+        if self.animation_state == 'run':
+            return self.run_sprite
+        elif self.animation_state == 'jump':
+            return self.jump_sprite
+        elif self.animation_state == 'death':
+            return self.death_sprite
+        elif self.animation_state == 'aim':
+            return self.aim_sprite
+        elif self.animation_state == 'dash':
+            return self.dash_sprite
+        return None
+    
+    def draw_sprite(self, app):
+        
+        current_sprite = self.get_current_sprite()
+        if current_sprite:
+            frame = current_sprite.getFrame(0, self.current_frame)
+            drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center', width=self.width, height=self.height)
+    
+    def trigger_death(self):
+        """Trigger death animation"""
+        self.set_animation_state('death')
+    
+   
 
     def get_rect(self):
             return (self.x, self.y, self.width, self.height)
@@ -327,22 +383,28 @@ class Player:
             self.dash_cooldown = self.dash_max_cooldown
             self.state = 'dash'
 
-    def upgrade_weapon(self):
-        if self.weapon_level < self.max_weapon_level:
-            self.weapon_level += 1
-            self.projectile_speed += 5
-            self.projectile_size += 2
-            return True
-        return False
+   
 
 
     def update(self, current_ground = 900, screen_width = 1500, screen_height = 1000):
+        if self.is_dashing:
+            self.set_animation_state('dash')
+        elif not self.is_grounded:
+            if self.vy <= 0:
+                self.set_animation_state('jump')
+        else:
+            
+            self.set_animation_state('run')
+            
         if self.is_dashing:
             self.x += self.dash_speed * self.dash_direction
             self.vy = 0
             self.dash_timer -= 1
             if self.dash_timer <= 0:
                 self.is_dashing = False
+                self.set_animation_state('run')
+            else:
+                self.set_animation_state('dash')
         print('update', self.dash_cooldown)
         if self.dash_cooldown > 0:
             print('hi')
@@ -359,10 +421,14 @@ class Player:
             self.is_grounded = True
             self.jumps_remaining = self.max_jumps  
             self.state = 'run'
+            self.set_animation_state('run')
         else:
             self.is_grounded = False
             if self.vy > 0:
                 self.state = 'fall'
+                self.set_animation_state('jump')
+            else:
+                self.set_animation_state('jump')
         
         if self.x < 0:
             self.x = 0
@@ -381,9 +447,20 @@ class Player:
             self.vy = 0
 
     def draw(self,app): 
-        drawRect(self.x, self.y,self.width,self.height, fill='cyan')
-        eye_y = self.y + 15
-        drawCircle(self.x + self.width-10, eye_y, 4 , fill = 'red')
+        # Draw sprite if available
+        current_sprite = self.get_current_sprite()
+        if current_sprite:
+            frame = current_sprite.getFrame(self.current_frame, 0)
+            # Use original frame dimensions with scale factor
+            orig_width, orig_height = current_sprite.getOriginalFrameSize()
+            scale_factor = 2.5  # Scale up sprite for better visibility
+            drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
+                     width=orig_width * scale_factor, height=orig_height * scale_factor)
+        else:
+            # Fallback to cyan rect
+            drawRect(self.x, self.y,self.width,self.height, fill='cyan')
+            eye_y = self.y + 15
+            drawCircle(self.x + self.width-10, eye_y, 4 , fill = 'red')
         if self.is_grounded:
             drawOval(self.x + self.width / 2, self.ground_y, self.width + 10, 8, fill='darkCyan', opacity=40)
 
@@ -568,6 +645,13 @@ def onAppStart(app):
     ]
     app.character = Character(830, 600)
     app.url = '/Users/lisuwang/untitled folder/112Projec/assets/images/Menu page/Menu page 1.png'
+    
+    try:
+        sprite_sheet_path = '/Users/lisuwang/untitled folder/112Projec/assets/images/cat-sprite-32x32.png'
+        app.character_sprite_sheet = SpriteSheet(sprite_sheet_path, rows=1, cols=4)
+        app.character.sprite = AnimatedSprite(app.character_sprite_sheet, app.character.x, app.character.y, 70, 70)
+    except Exception as e:
+        print(f"Failed to load sprite sheet: {e}")
 
     
     app.demo_targets = [
@@ -635,6 +719,10 @@ def onAppStart(app):
 def onStep(app):
     if app.state == 'intro':
         app.intro.change(app)
+    
+    elif app.state == 'menu':
+        if app.character.sprite:
+            app.character.sprite.updateAnimation()
 
     elif app.state == 'calibration':
         if app.recording_data and app.vision.raw_vx is not None and app.vision.raw_vy is not None:
@@ -649,6 +737,7 @@ def onStep(app):
             app.survival_time = time.time() - app.game_start_time
             app.bg.update()
             app.player.update()
+            app.player.update_animation()
             if app.insideGame == 'tutorial':
                 app.tutorial.update(app.game_speed,app)
             
@@ -663,6 +752,7 @@ def onStep(app):
                 app.smart_map.update(app.game_speed, app)
                 app.smart_map.checkCollision(app.player, app)
             if app.player.hp <= 0 and app.state == 'game':
+                app.player.trigger_death()
                 app.state = 'gameover'
                 return
             if app.Switchcooldown == 0:
@@ -723,6 +813,7 @@ def onStep(app):
                         app.player.dash(direction)
                         app.hand_dash_cooldown = 25
                 if app.vision.hand_gesture == 'PISTOL_AIM' and app.vision.hand_x != None and app.vision.hand_y != None:
+                    app.player.set_animation_state('aim')
                     start_x = app.player.x + app.player.width / 2
                     start_y = app.player.y + app.player.height / 2
                     vx = (app.vision.hand_x - app.player.x) / 20
@@ -879,6 +970,8 @@ def onKeyPress(app, key):
             app.state = 'menu'
             app.player.hp = app.player.max_hp  
             app.character.x, app.character.y = 830, 600  
+            app.player.hp = app.player.max_hp  # Reset HP when going to menu
+            app.character.x, app.character.y = 830, 600  # Reset character position to avoid triggering game start
 
 def drawGameOver(app):
     drawRect(0, 0, app.width, app.height, fill='black', opacity=85)
@@ -935,6 +1028,7 @@ def onKeyHold(app, keys):
                                 app.smart_map.respawnOnPlatform(app.player)
                             else:
                                 app.state = 'game'
+                            app.state = 'game'
                     if v == app.rightest_upper_building:
                         if not app.fenced:
                             app.msg_need_ca = 'please go to the fence to finish the lab'
@@ -959,7 +1053,12 @@ def redrawAll(app):
     elif app.state == 'menu':
         imageWidth, imageHeight = getImageSize(app.url)
         drawImage(app.url, app.width/2, app.height/2, align='center', width=imageWidth, height=imageHeight)
-        drawCircle(app.character.x, app.character.y, 10, fill='red')
+        
+        if app.character.sprite:
+            app.character.sprite.draw(app)
+        else:
+            drawCircle(app.character.x, app.character.y, 10, fill='red')
+        
         if app.msg_need_ca != None:
             drawLabel(app.msg_need_ca, app.width//2, 30, fill= 'yellow', bold = True)
         
@@ -1032,6 +1131,7 @@ def redrawAll(app):
         
         drawRect(app.width//2 - 250, app.height - 100, 500, 50, fill='lime', opacity=30, border='lime', borderWidth=2)
         drawLabel("Press [ ENTER ] to proceed to Tutorial | Press [ B ] to return to Town", app.width//2, app.height - 75, fill='lime', size=14, bold=True)
+        drawLabel(f"Objective: {hint_str} | Press [ SPACE ] Switch Mode | Press [ B ] Back to Menu", 40, 50, fill='gray', size=13, align='left')
 
     
         
