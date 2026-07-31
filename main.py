@@ -278,88 +278,42 @@ class Player:
         self.width = width
         self.height = height
         self.vy = 0.0
-        self.g = 1.5 # gravitational a, since on graphics + means down
+        self.g = 1.5
         self.jump_power = -22
         
-        # Animation state system
-        self.animation_state = 'run'  # , run, jump, death, aim, dash
-        self.sprite_sheet = None
+        self.sprite_sheet = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/idle.png", 1, 10)
         self.current_frame = 0
         self.animation_timer = 0
         self.animation_speed = 5
-        self.facing_direction = 1  # 1 = right, -1 = left
-        
-        self.run_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/move without FX.png", 8,1)
-        self.jump_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/wake.png",5,1 )
-        self.death_sprite = SpriteSheet ("/Users/lisuwang/untitled folder/112Projec/assets/images/death.png", 6, 1)
-        self.aim_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/charge.png", 4,1)
-        self.dash_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/GAS dash with FX.png",7,1)
         
         self.is_grounded = False
         self.ground_y = 900
         self.jumps_remaining = 2  
         self.max_jumps = 2
         self.dash_cooldown = 0
-        self.dash_max_cooldown = 60  # 1.2 sec
+        self.dash_max_cooldown = 60
         self.dash_speed = 25
         self.dash_duration = 15
         self.dash_timer = 0
         self.is_dashing = False
         self.dash_direction = 1  
-        self.state = 'run' #for future animation and so ( run jump fall dash slide...)
-        
+        self.state = 'run'
         
         self.weapon_level = 1
         self.max_weapon_level = 3
         self.projectile_speed = 15
         self.projectile_size = 5
         self.fire_rate = 0
-
-        
         self.hp = 3
         self.max_hp = 3
-    
-    # Placeholder animation methods (user to implement)
-    def set_animation_state(self, state):
-        self.animation_state = state
-        self.current_frame = 0
-        self.animation_timer = 0
-    
-    
+
+    def get_rect(self):
+        return (self.x, self.y, self.width, self.height)
     def update_animation(self):
-            
         self.animation_timer += 1
         if self.animation_timer >= self.animation_speed:
             self.animation_timer = 0
-            current_sprite = self.get_current_sprite()
-            if current_sprite:
-                self.current_frame = (self.current_frame + 1) % current_sprite.cols
-    
-    def get_current_sprite(self):
-        
-        if self.animation_state == 'run':
-            return self.run_sprite
-        elif self.animation_state == 'jump':
-            return self.jump_sprite
-        elif self.animation_state == 'death':
-            return self.death_sprite
-        elif self.animation_state == 'aim':
-            return self.aim_sprite
-        elif self.animation_state == 'dash':
-            return self.dash_sprite
-        return None
-    
-    def draw_sprite(self, app):
-        
-        current_sprite = self.get_current_sprite()
-        if current_sprite:
-            frame = current_sprite.getFrame(0, self.current_frame)
-            drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center', width=self.width, height=self.height)
-    
-   
-
-    def get_rect(self):
-            return (self.x, self.y, self.width, self.height)
+            self.current_frame = (self.current_frame + 1) % self.sprite_sheet.cols
         
     def jump(self):
         if self.jumps_remaining > 0:
@@ -391,23 +345,12 @@ class Player:
 
     def update(self, current_ground = 900, screen_width = 1500, screen_height = 1000):
         if self.is_dashing:
-            self.set_animation_state('dash')
-        elif not self.is_grounded:
-            if self.vy <= 0:
-                self.set_animation_state('jump')
-        else:
-            
-            self.set_animation_state('run')
-            
-        if self.is_dashing:
             self.x += self.dash_speed * self.dash_direction
             self.vy = 0
             self.dash_timer -= 1
             if self.dash_timer <= 0:
                 self.is_dashing = False
-        print('update', self.dash_cooldown)
         if self.dash_cooldown > 0:
-            print('hi')
             self.dash_cooldown -= 1
         
         self.ground_y = current_ground
@@ -443,9 +386,11 @@ class Player:
             self.vy = 0
 
     def draw(self,app): 
-        drawRect(self.x, self.y,self.width,self.height, fill='cyan')
-        eye_y = self.y + 15
-        drawCircle(self.x + self.width-10, eye_y, 4 , fill = 'red')
+        frame = self.sprite_sheet.getFrame(0, self.current_frame)
+        orig_width, orig_height = self.sprite_sheet.getOriginalFrameSize()
+        scale_factor = 1.5
+        drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
+                 width=orig_width * scale_factor, height=orig_height * scale_factor)
         if self.is_grounded:
             drawOval(self.x + self.width / 2, self.ground_y, self.width + 10, 8, fill='darkCyan', opacity=40)
 
@@ -786,7 +731,6 @@ def onStep(app):
                         app.player.dash(direction)
                         app.hand_dash_cooldown = 25
                 if app.vision.hand_gesture == 'PISTOL_AIM' and app.vision.hand_x != None and app.vision.hand_y != None:
-                    app.player.set_animation_state('run')
                     start_x = app.player.x + app.player.width / 2
                     start_y = app.player.y + app.player.height / 2
                     vx = (app.vision.hand_x - app.player.x) / 20

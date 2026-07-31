@@ -319,7 +319,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Crumbling Platforms',
-                        'text': '',
+                        'text': 'Watch out! These platforms crumble when you step on them. Move quickly!',
                         'objects': [
                             CrumblingPlatform(400, 750, 150),
                             Platform(900, 700, 100),
@@ -329,7 +329,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Bouncy Platforms',
-                        'text': '',
+                        'text': 'These bouncy platforms will launch you high! Use them to reach new heights.',
                         'objects': [
                             BouncyPlatform(400, 750, 150, bounciness=1.8),
                             Platform(950, 650, 150),
@@ -338,10 +338,8 @@ class TutorialLevel:
                         ]
                     },
                     {
-                        'name': 'Collectibles',
-                        'text': 'Collect items to score points!',
                         'name': 'Springs',
-                        'text': '',
+                        'text': 'Springs can boost you even higher! Perfect for reaching distant platforms.',
                         'objects': [
                             Spring(450, 780, boost_power=-18),
                             Platform(900, 650, 200),
@@ -352,7 +350,7 @@ class TutorialLevel:
                     
                     {
                         'name': 'Collectibles - Coins',
-                        'text': '',
+                        'text': 'Collect coins to increase your score! Every point counts.',
                         'objects': [
                             Platform(400, 750, 200),
                             Coin(450, 700),
@@ -365,7 +363,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Collectibles - Gems',
-                        'text': '',
+                        'text': 'Gems are worth more points! Collect them for bonus rewards.',
                         'objects': [
                             Platform(400, 750, 200),
                             Gem(450, 700),
@@ -377,7 +375,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Health Packs',
-                        'text': '',
+                        'text': 'Health packs restore your HP. Grab them when you need healing!',
                         'objects': [
                             Platform(400, 750, 200),
                             HealthPack(500, 700),
@@ -388,7 +386,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Spikes',
-                        'text': '',
+                        'text': 'Avoid these spikes! They will damage you on contact.',
                         'objects': [
                             Platform(400, 750, 200),
                             Spike(500, 770),
@@ -402,8 +400,6 @@ class TutorialLevel:
                     {
                         'name': 'Enemies',
                         'text': 'Defeat enemies to survive!',
-                        'name': 'Ground Enemies',
-                        'text': '',
                         'objects': [
                             Platform(400, 750, 300),
                             Enemy(500, 690, patrol_range=80),
@@ -414,7 +410,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Flying Enemies',
-                        'text': '',
+                        'text': 'Flying enemies are harder to hit! Use your projectiles wisely.',
                         'objects': [
                             Platform(400, 750, 200),
                             FlyingEnemy(500, 600),
@@ -425,7 +421,7 @@ class TutorialLevel:
                     },
                     {
                         'name': 'Gaze Doors',
-                        'text': '',
+                        'text': 'Gaze at the center of the screen to activate special abilities!',
                         'objects': [
                             Platform(400, 750, 200),
                             Platform(950, 650, 80),
