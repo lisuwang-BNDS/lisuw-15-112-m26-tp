@@ -300,7 +300,6 @@ class TutorialLevel:
                         'objects': [
                             Platform(400, 750, 200),
                             Platform(950, 700, 200),
-                            Platform(1500, 650, 200),
                         ]
                     },
                     {
@@ -308,121 +307,28 @@ class TutorialLevel:
                         'text': 'Great moves, now time your jumps !',
                         'objects': [
                             MovingPlatform(400, 750, 150, move_range=80, vertical=True),
-                            MovingPlatform(950, 700, 150, move_range=60, vertical=True),
-                            MovingPlatform(1500, 650, 150, move_range=100, vertical=True),
+                            Platform(950, 700, 200),
                         ]
                     },
                     {
-                        'name': 'Crumbling Platforms',
-                        'text': '',
-                        'objects': [
-                            CrumblingPlatform(400, 750, 150),
-                            Platform(900, 700, 100),
-                            CrumblingPlatform(1300, 650, 150),
-                            Platform(1700, 600, 200),
-                        ]
-                    },
-                    {
-                        'name': 'Bouncy Platforms',
-                        'text': '',
-                        'objects': [
-                            BouncyPlatform(400, 750, 150, bounciness=1.8),
-                            Platform(950, 650, 150),
-                            BouncyPlatform(1400, 550, 150, bounciness=2.0),
-                            Platform(1850, 450, 200),
-                        ]
-                    },
-                    {
-                        'name': 'Springs',
-                        'text': '',
-                        'objects': [
-                            Spring(450, 780, boost_power=-18),
-                            Platform(900, 650, 200),
-                            Spring(1350, 630, boost_power=-22),
-                            Platform(1800, 500, 200),
-                        ]
-                    },
-                    
-                    {
-                        'name': 'Collectibles - Coins',
-                        'text': '',
+                        'name': 'Collectibles',
+                        'text': 'Collect items to score points!',
                         'objects': [
                             Platform(400, 750, 200),
                             Coin(450, 700),
-                            Coin(500, 700),
                             Platform(950, 700, 200),
-                            Coin(1000, 650),
-                            Coin(1050, 650),
-                            Platform(1500, 650, 200),
+                            Gem(1000, 650),
                         ]
                     },
                     {
-                        'name': 'Collectibles - Gems',
-                        'text': '',
-                        'objects': [
-                            Platform(400, 750, 200),
-                            Gem(450, 700),
-                            Platform(950, 650, 200),
-                            Gem(1000, 600),
-                            Gem(1050, 600),
-                            Platform(1500, 550, 200),
-                        ]
-                    },
-                    {
-                        'name': 'Health Packs',
-                        'text': '',
-                        'objects': [
-                            Platform(400, 750, 200),
-                            HealthPack(500, 700),
-                            Platform(950, 700, 200),
-                            HealthPack(1050, 650),
-                            Platform(1500, 650, 200),
-                        ]
-                    },
-                    {
-                        'name': 'Spikes',
-                        'text': '',
-                        'objects': [
-                            Platform(400, 750, 200),
-                            Spike(500, 770),
-                            Platform(950, 700, 200),
-                            Spike(1050, 720),
-                            Spike(1100, 720),
-                            Platform(1500, 650, 200),
-                        ]
-                    },
-                    {
-                        'name': 'Ground Enemies',
-                        'text': '',
+                        'name': 'Enemies',
+                        'text': 'Defeat enemies to survive!',
                         'objects': [
                             Platform(400, 750, 300),
                             Enemy(500, 690, patrol_range=80),
                             Platform(950, 700, 300),
-                            Enemy(1050, 640, patrol_range=100),
-                            Platform(1500, 650, 200),
                         ]
                     },
-                    {
-                        'name': 'Flying Enemies',
-                        'text': '',
-                        'objects': [
-                            Platform(400, 750, 200),
-                            FlyingEnemy(500, 600),
-                            Platform(950, 700, 200),
-                            FlyingEnemy(1050, 550),
-                            Platform(1500, 650, 200),
-                        ]
-                    },
-                    {
-                        'name': 'Gaze Doors',
-                        'text': '',
-                        'objects': [
-                            Platform(400, 750, 200),
-                            Platform(950, 650, 80),
-                            Platform(1150, 650, 200),
-                        ]
-                    },
-        
                 ]
 
 
