@@ -41,10 +41,67 @@ import eye_tracker
 from vision_tracker import VisionTrackerThread, VisionData
 from smart_map import TutorialLevel,RecursiveSmartMapGenerator, Bullet, Enemy, FlyingEnemy
 from sprite_system import SpriteSheet, AnimatedSprite
+from tutorial_story import TutorialStory
 
 Samplesize_need = 20
 
+class TutorialGuide:
+    def __init__(self):
+        self.current_step = 0
+        self.completed = False
+        self.show_highlights = True
+        self.story_steps = self._create_story()
+        
+    def _create_story(self):
+        #this tutorial text is written by ai and will be replaced later on
+        return [
+            {
+                'id': 'intro',
+                'title': 'WELCOME TO ENVISION',
+                'text': 'Welcome, Envisioner. You must calibrate your ocular interface\nbefore entering the simulation. Go to the calibration house.',
+                'color': 'cyan',
+                'instruction': 'Navigate to the highlighted house'
+            },
+            {
+                'id': 'calibration_complete',
+                'title': 'CALIBRATION COMPLETE',
+                'text': 'Ocular interface synchronized. Practice in the lab,\nthen return to town and enter the training facility.',
+                'color': 'lime',
+                'instruction': 'Press [B] to return to town when done practicing'
+            },
+            {
+                'id': 'tutorial_complete',
+                'title': 'TRAINING COMPLETE',
+                'text': 'You have mastered the basics. Return to town\nand enter the main simulation when ready.',
+                'color': 'gold',
+                'instruction': 'Press [B] to return to town'
+            },
+            {
+                'id': 'real_game',
+                'title': 'MAIN SIMULATION',
+                'text': 'The real challenge awaits. Enter the simulation\nto begin your journey.',
+                'color': 'magenta',
+                'instruction': 'Navigate to the highlighted entrance'
+            }
+        ]
 
+    
+    def trigger_death(self):
+        self.set_animation_state('death')
+    def get_current_step(self):
+        if self.current_step < len(self.story_steps):
+            return self.story_steps[self.current_step]
+        return None
+    
+    def next_step(self):
+        self.current_step += 1
+        if self.current_step >= len(self.story_steps):
+            self.completed = True
+    
+    def reset(self):
+        self.current_step = 0
+        self.completed = False
+        self.show_highlights = True
 def restart_game(app):
     app.player = Player(x=200, y=450, width=40, height=70)  
     app.bullets = []
