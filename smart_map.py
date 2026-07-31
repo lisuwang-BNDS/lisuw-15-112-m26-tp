@@ -47,7 +47,7 @@ class Platform(GameObject):
         self.x -= game_speed
 
     def draw(self,app):
-        drawRect(self.x, self.y, self.width, self.height, fill='gray')
+        drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/Weixin Image_20260731103158_680_1.jpg',self.x, self.y, width = self.width, height = self.height)
         #image
     
     def on_player_stepped(self,player):
@@ -74,8 +74,12 @@ class MovingPlatform(Platform):
         else:
             self.x = self.base_x + deviates
     def draw(self, app):
-        color = 'orange' if self.vertical else 'yellow'
-        drawRect(self.x, self.y, self.width, self.height, fill=color)
+        if self.vertical:
+            print('ok')
+            drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/W.jpg',self.x, self.y, width = self.width, height = self.height)
+        else:
+            drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/Future Noir.jpg',self.x, self.y, width = self.width, height = self.height)
+
 
 
 class CrumblingPlatform(Platform):
@@ -493,32 +497,28 @@ class TutorialLevel:
             drawLabel(self.text,app.width//2, 75, fill ='white')
 
     def check_collisions(self,player,app):
-        # Bullet collision (keyboard mode only - uses HP system)
         if hasattr(app, 'bullets') and app.camera_mode == 2:
             for b in app.bullets[:]:
                 if not b.is_active:
                     continue
                 for v in self.spawned:
                     if getattr(v, 'is_active', True) and isinstance(v, (Enemy, FlyingEnemy)):
-           
+                        
                         if b.collides_with(v):
-                            b.is_active = False    
+                            b.is_active = False 
                             if b in app.bullets:
                                 app.bullets.remove(b)
-                            # Keyboard mode: use HP system (3 hits for enemy, 2 for flying)
                             if v.take_damage():
                                 v.is_active = False
                                 print("Enemy defeated by keyboard bullet!")
                             else:
                                 print(f"Enemy hit by keyboard bullet! HP: {v.hp}")
                             break
-        playerinfo = player.get_rect()
-        playeIsOnPlat = False
+        playerIsOnPlat = False
         highestPl = float('inf')
         landedPl = None
-        
         for v in self.spawned:
-            if v.is_active == False:
+            if not getattr(v, 'is_active', True):
                 continue
             if isinstance(v, Platform):
                 if v.collides_with(player):
@@ -528,53 +528,72 @@ class TutorialLevel:
                     playerRight = player.x + player.width
                     playerLastBot = playerBot - player.vy
                     playerLastTop = playerTop - player.vy
-                    
-                    if playerLastBot <= v.y + 5 and player.vy >= 0 and playerBot >= v.y:
+                    if playerLastBot <= v.y + 10 and player.vy >= 0 and playerBot >= v.y:
                         if v.y < highestPl:
                             highestPl = v.y
-                            playeIsOnPlat = True
+                            playerIsOnPlat = True
                             landedPl = v
                     
-                    elif playerLastTop >= v.y + v.height - 5 and player.vy < 0 and playerTop <= v.y + v.height:
-        
+                    elif playerLastTop >= v.y + v.height - 10 and player.vy < 0 and playerTop <= v.y + v.height:
                         player.y = v.y + v.height
                         player.vy = 0
                     
                     elif playerRight >= v.x and playerLeft < v.x:
                         player.x = v.x - player.width
-                    
                     elif playerLeft <= v.x + v.width and playerRight > v.x + v.width:
                         player.x = v.x + v.width
-            
+
             elif isinstance(v, Collectible):
-                if v.collides_with(player):
-                    if not v.collected:
-                        v.on_collect(player)
+                if v.collides_with(player) and not v.collected:
+                    v.on_collect(player)
 
             elif isinstance(v, Obstacle):
                 if v.collides_with(player):
-                    #  damage 
-                    player.x = 200
-                    player.y = 730
-                    player.vy = 0
-                    player.jumps_remaining = player.max_jumps  
-            
-        if playeIsOnPlat and landedPl:
+                    if hasattr(player, 'hp'):
+                        player.hp -= v.damage
+                    else:
+                        player.y = 500
+                        player.vy = 0
+                        player.jumps_remaining = player.max_jumps
+
+        if playerIsOnPlat and landedPl:
             player.y = highestPl - player.height
             player.vy = 0
             player.is_grounded = True
             player.ground_y = highestPl
             player.jumps_remaining = player.max_jumps 
-            landedPl.on_player_stepped(player)
+            landedPl.on_player_stepped(player) 
         else:
             player.is_grounded = False
-            if player.y > 1460:
-                player.x = 200
-                player.y = 300
+            if player.y >= 830:
+                if hasattr(player, 'hp'):
+                    player.hp -= 1
+                    if player.hp > 0:
+                        self.respawnOnPlatform(player)
+                else:
+                    player.x = 200
+                    player.y = 300
+                    player.vy = 0
+                    player.jumps_remaining = player.max_jumps
+    def respawnOnPlatform(self, player):
+            platforms = [v for v in self.spawned if isinstance(v, Platform)]
+            if platforms:
+                platforms.sort(key=lambda p: p.x)
+                if len(platforms )==1:
+                    first_plat = platforms[0]
+                else:
+                    first_plat = platforms[1]
+                player.x = first_plat.x + first_plat.width / 2 - player.width / 2
+                player.y = first_plat.y - 600
                 player.vy = 0
+                player.is_grounded = False
                 player.jumps_remaining = player.max_jumps
-   
-
+            else:
+                player.x = 150
+                player.y = 450  
+                player.vy = 0
+                player.is_grounded = False
+                player.jumps_remaining = player.max_jumps
 #integtate. camera 
 
 #simple harded only one jump eye and hand , double jumop and dash 
@@ -707,7 +726,6 @@ class RecursiveSmartMapGenerator:
             if getattr(v, 'is_active', True):
                 v.draw(app)
     def checkCollision(self,player,app):
-        # Bullet collision (keyboard mode only - uses HP system)
         if hasattr(app, 'bullets') and app.camera_mode == 2:
             for b in app.bullets[:]:
                 if not b.is_active:
@@ -781,7 +799,6 @@ class RecursiveSmartMapGenerator:
                     player.hp -= 1
                     if player.hp > 0:
                         self.respawnOnPlatform(player)
-                    # If HP is 0, let the main game loop handle gameover
                 else:
                     player.x = 200
                     player.y = 300
@@ -792,18 +809,18 @@ class RecursiveSmartMapGenerator:
         platforms = [v for v in self.spawned if isinstance(v, Platform)]
         if platforms:
             platforms.sort(key=lambda p: p.x)
-            # Always use the first (leftmost) platform for safe respawn
-            first_plat = platforms[0]
-            # Drop player from high above the platform
+            if len(platforms )==1:
+                first_plat = platforms[0]
+            else:
+                first_plat = platforms[1]
             player.x = first_plat.x + first_plat.width / 2 - player.width / 2
-            player.y = first_plat.y - 300  # Drop from 300px above platform
+            player.y = first_plat.y - 600
             player.vy = 0
             player.is_grounded = False
             player.jumps_remaining = player.max_jumps
         else:
-            # Drop from high above if no platform found
             player.x = 150
-            player.y = 450  # Drop from high above
+            player.y = 450  
             player.vy = 0
             player.is_grounded = False
             player.jumps_remaining = player.max_jumps
@@ -811,23 +828,20 @@ class Bullet(GameObject):
     def __init__(self, x, y, speed=12, width=12, height=6, direction=1):
         super().__init__(x, y, width, height)
         self.speed = speed * direction
-        self.trail = []  # For trail effect
+        self.trail = [] 
         
-        # Animation placeholder (user to implement)
         self.sprite_sheet = None
         self.current_frame = 0
         self.animation_timer = 0
         self.animation_speed = 3
     
     def update(self, game_speed, app):
-        # Add current position to trail
         self.trail.append((self.x, self.y))
         if len(self.trail) > 5:
             self.trail.pop(0)
         
         self.x += self.speed - game_speed
         
-        # Update animation (user to implement sprite sheet loading)
         if self.sprite_sheet:
             self.animation_timer += 1
             if self.animation_timer >= self.animation_speed:
@@ -845,13 +859,12 @@ class Bullet(GameObject):
                 trail_size = self.width * (i / len(self.trail))
                 if trail_size > 0:
                     drawOval(tx, ty, trail_size, self.height, fill='orange', opacity=alpha)
-            # Draw sprite if available (user to implement)
+            
             if self.sprite_sheet:
                 frame = self.sprite_sheet.getFrame(self.current_frame, 0)
                 drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
                          width=self.width, height=self.height)
             else:
-                # Fallback to trail effect
                 for i, (tx, ty) in enumerate(self.trail):
                     alpha = int(255 * (i / len(self.trail)) * 0.5)
                     alpha = min(100, alpha)

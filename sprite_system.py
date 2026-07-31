@@ -8,6 +8,7 @@ class SpriteSheet:
             self.sheet = self.sheet.convert('RGBA')
         self.rows = rows
         self.cols = cols
+        
         self.frameWidth = self.sheet.size[0] / self.cols
         self.frameHeight = self.sheet.size[1] / self.rows
         self.frames = {}
