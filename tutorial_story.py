@@ -1,4 +1,3 @@
-#this class is written by ai
 class TutorialStory:
     def __init__(self):
         self.current_step = 0

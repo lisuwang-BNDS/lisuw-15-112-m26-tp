@@ -107,7 +107,7 @@ class CrumblingPlatform(Platform):
         shake = 0
         if self.stepped and self.timer > 0:
             shake = random.randint(-2, 2)
-        drawRect(self.x + shake, self.y, self.width, self.height, fill='brown')
+        drawImage("/Users/lisuwang/untitled folder/112Projec/assets/images/1.jpg",self.x + shake, self.y, width = self.width, height = self.height )#########3##
         if self.stepped and self.timer > 0:
             drawLabel(f"{self.timer}", self.x + self.width/2, self.y - 10, fill='red', size=16)
 
@@ -138,24 +138,40 @@ class Enemy(Obstacle):
         self.speed = 2
         self.hp = 3  
         self.max_hp = 3
+        
+        # Sprite sheet animation setup (1 row, 6 columns)
+        from sprite_system import SpriteSheet
+        self.sprite_sheet = SpriteSheet('/Users/lisuwang/untitled folder/112Projec/assets/images/Attack.png', 1, 6)
+        self.current_frame = 0
+        self.animation_timer = 0
+        self.animation_speed = 5  # Adjust speed of animation
     
     def update(self, game_speed, app):
         self.base_x -= game_speed
         #for pistol
         self.x = self.base_x + math.sin(app.stepsPerSecond * 0.05) * self.patrol_range
+        
+        # Update animation frame
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.current_frame = (self.current_frame + 1) % 6  # Loop through 6 frames
     
     def take_damage(self, damage=1):
         self.hp -= damage
         return self.hp <= 0
     
     def draw(self, app):
-        drawRect(self.x, self.y, self.width, self.height, fill='purple')
-    
+        # Draw animated sprite frame
+        frame = self.sprite_sheet.getFrame(0, self.current_frame)
+        orig_width, orig_height = self.sprite_sheet.getOriginalFrameSize()
+        drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
+                 width=orig_width * 1.5, height=orig_height * 1.5)
+        
         if self.hp < self.max_hp:
             hp_bar_width = self.width * (self.hp / self.max_hp)
             drawRect(self.x, self.y - 10, hp_bar_width, 5, fill='red')
             drawRect(self.x, self.y - 10, self.width, 5, fill='gray', border='black')
-
 
 class FlyingEnemy(Obstacle):
     def __init__(self, x, y, width=40, height=40):
@@ -165,23 +181,37 @@ class FlyingEnemy(Obstacle):
         self.wing_angle = 0
         self.hp = 2  # Flying enemies have less HP - takes 2 hits to kill
         self.max_hp = 2
+        
+        # Sprite sheet animation setup (1 row, 6 columns)
+        from sprite_system import SpriteSheet
+        self.sprite_sheet = SpriteSheet('/Users/lisuwang/untitled folder/112Projec/assets/images/Aurigaidlewithshadow-Sheet.png', 1, 6)
+        self.current_frame = 0
+        self.animation_timer = 0
+        self.animation_speed = 5  # Adjust speed of animation
     
     def update(self, game_speed, app):
         self.base_x -= game_speed
         self.x = self.base_x
         self.y = self.base_y + math.sin(app.stepsPerSecond * 0.1) * 30
         self.wing_angle += 0.3
+        
+        # Update animation frame
+        self.animation_timer += 1
+        if self.animation_timer >= self.animation_speed:
+            self.animation_timer = 0
+            self.current_frame = (self.current_frame + 1) % 6  # Loop through 6 frames
     
     def take_damage(self, damage=1):
         self.hp -= damage
         return self.hp <= 0
     
     def draw(self, app):
-        drawCircle(self.x + self.width/2, self.y + self.height/2, 15, fill='darkGreen')
-        wing = math.sin(self.wing_angle) * 10
-        drawOval(self.x - 10, self.y + wing, 20, 10, fill='lime')
-        drawOval(self.x + self.width - 10, self.y + wing, 20, 10, fill='lime')
-        # Draw HP bar
+        # Draw animated sprite frame
+        frame = self.sprite_sheet.getFrame(0, self.current_frame)
+        orig_width, orig_height = self.sprite_sheet.getOriginalFrameSize()
+        drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
+                 width=orig_width * 1.5, height=orig_height * 1.5)
+       
         if self.hp < self.max_hp:
             hp_bar_width = self.width * (self.hp / self.max_hp)
             drawRect(self.x, self.y - 10, hp_bar_width, 5, fill='red')
@@ -227,7 +257,7 @@ class Gem(Collectible):
         if self.collected:
             return
         
-        drawRect(self.x,self.y,self.width, self.height,fill = 'cyan')
+        drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/dimon Image_20260731165217_700_1.jpg',self.x,self.y,width = self.width, height = self.height)
 
 
 class HealthPack(Collectible):
@@ -237,7 +267,7 @@ class HealthPack(Collectible):
     def draw(self, app):
         if self.collected:
             return
-        drawRect(self.x, self.y, self.width, self.height, fill='white', border='red', borderWidth=2)
+        drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/health Image_20260731165239_702_1.jpg',self.x, self.y, width = self.width, height= self.height)
         
 
 
@@ -281,7 +311,7 @@ class BouncyPlatform(Platform):
             player.vy = -12
     
     def draw(self, app):
-        drawRect(self.x, self.y, self.width, self.height, fill='pink')
+        drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/Shinny_20260731164529_697_1.jpg',self.x, self.y, width = self.width, height = self.height)
         drawLabel("BOUNCE", self.x, self.y , fill='white')
 
 ######HARD COOOODEED TUTORIAL LEVEL.  TAT

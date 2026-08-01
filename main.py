@@ -42,9 +42,7 @@ from vision_tracker import VisionTrackerThread, VisionData
 from smart_map import TutorialLevel,RecursiveSmartMapGenerator, Bullet, Enemy, FlyingEnemy
 from sprite_system import SpriteSheet, AnimatedSprite
 from tutorial_story import TutorialStory
-
 Samplesize_need = 20
-
 class TutorialGuide:
     def __init__(self):
         self.current_step = 0
@@ -84,10 +82,7 @@ class TutorialGuide:
                 'instruction': 'Navigate to the highlighted entrance'
             }
         ]
-
     
-    def trigger_death(self):
-        self.set_animation_state('death')
     def get_current_step(self):
         if self.current_step < len(self.story_steps):
             return self.story_steps[self.current_step]
@@ -102,8 +97,10 @@ class TutorialGuide:
         self.current_step = 0
         self.completed = False
         self.show_highlights = True
+
+
 def restart_game(app):
-    app.player = Player(x=200, y=450, width=40, height=70)  
+    app.player = Player(x=200, y=450, width=40, height=70)  # Start from high above
     app.bullets = []
     app.projectiles = []
     app.tutorial = TutorialLevel()
@@ -113,6 +110,7 @@ def restart_game(app):
     app.game_start_time = time.time()
     app.survival_time = 0
     app.state = 'game'
+    # Respawn player on the starting platform (drop from above)
     app.smart_map.respawnOnPlatform(app.player)
 
 class RandomParallaxBackground:
@@ -262,14 +260,12 @@ class Character: #this is the character for the starting page menu
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.sprite = None
 
     def move(self, dx, dy):
         self.x += dx
         self.y += dy
         if self.sprite:
             self.sprite.x = self.x
-            self.sprite.y = self.y
 
 class Player:
     def __init__(self,x,y,width = 40, height = 80):
@@ -278,42 +274,89 @@ class Player:
         self.width = width
         self.height = height
         self.vy = 0.0
-        self.g = 1.5
+        self.g = 1.5 # gravitational a, since on graphics + means down
         self.jump_power = -22
         
-        self.sprite_sheet = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/idle.png", 1, 10)
+        self.animation_state = 'run'  # , run, jump, death, aim, dash
+        self.sprite_sheet = None
         self.current_frame = 0
         self.animation_timer = 0
         self.animation_speed = 5
+        self.facing_direction = 1  # 1 = right, -1 = left
+        self.run_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/wake.png",5,1 )
+        self.jump_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/wake.png",5,1 )
+        self.death_sprite = SpriteSheet ("/Users/lisuwang/untitled folder/112Projec/assets/images/death.png", 6, 1)
+        self.aim_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/charge.png", 4,1)
+        self.dash_sprite = SpriteSheet("/Users/lisuwang/untitled folder/112Projec/assets/images/GAS dash with FX.png",7,1)
         
         self.is_grounded = False
         self.ground_y = 900
         self.jumps_remaining = 2  
         self.max_jumps = 2
         self.dash_cooldown = 0
-        self.dash_max_cooldown = 60
+        self.dash_max_cooldown = 60  # 1.2 sec
         self.dash_speed = 25
         self.dash_duration = 15
         self.dash_timer = 0
         self.is_dashing = False
         self.dash_direction = 1  
-        self.state = 'run'
+        self.state = 'run' #for future animation and so ( run jump fall dash slide...)
+        
         
         self.weapon_level = 1
         self.max_weapon_level = 3
         self.projectile_speed = 15
         self.projectile_size = 5
         self.fire_rate = 0
-        self.hp = 3
-        self.max_hp = 3
 
-    def get_rect(self):
-        return (self.x, self.y, self.width, self.height)
+        
+        self.hp = 15
+        self.max_hp = 15
+    
+    def set_animation_state(self, state):
+        self.animation_state = state
+        self.current_frame = 0
+        self.animation_timer = 0
+    
+    
     def update_animation(self):
+            
         self.animation_timer += 1
         if self.animation_timer >= self.animation_speed:
             self.animation_timer = 0
-            self.current_frame = (self.current_frame + 1) % self.sprite_sheet.cols
+            current_sprite = self.get_current_sprite()
+            if current_sprite:
+                self.current_frame = (self.current_frame + 1) % current_sprite.cols
+    
+    def get_current_sprite(self):
+        
+        if self.animation_state == 'run':
+            return self.run_sprite
+        elif self.animation_state == 'jump':
+            return self.jump_sprite
+        elif self.animation_state == 'death':
+            return self.death_sprite
+        elif self.animation_state == 'aim':
+            return self.aim_sprite
+        elif self.animation_state == 'dash':
+            return self.dash_sprite
+        return None
+    
+    def draw_sprite(self, app):
+        
+        current_sprite = self.get_current_sprite()
+        if current_sprite:
+            frame = current_sprite.getFrame(0, self.current_frame)
+            drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center', width=self.width, height=self.height)
+    
+    def trigger_death(self):
+        """Trigger death animation"""
+        self.set_animation_state('death')
+    
+   
+
+    def get_rect(self):
+            return (self.x, self.y, self.width, self.height)
         
     def jump(self):
         if self.jumps_remaining > 0:
@@ -339,18 +382,29 @@ class Player:
             self.dash_direction = direction
             self.dash_cooldown = self.dash_max_cooldown
             self.state = 'dash'
+            self.set_animation_state('dash')  # Reset and start dash animation
 
    
 
 
     def update(self, current_ground = 900, screen_width = 1500, screen_height = 1000):
+        if not self.is_dashing:
+            if not self.is_grounded:
+                if self.vy <= 0:
+                    self.set_animation_state('jump')
+            else:
+                self.set_animation_state('run')
+            
         if self.is_dashing:
             self.x += self.dash_speed * self.dash_direction
             self.vy = 0
             self.dash_timer -= 1
             if self.dash_timer <= 0:
                 self.is_dashing = False
+                self.set_animation_state('run')
+        print('update', self.dash_cooldown)
         if self.dash_cooldown > 0:
+            print('hi')
             self.dash_cooldown -= 1
         
         self.ground_y = current_ground
@@ -364,10 +418,14 @@ class Player:
             self.is_grounded = True
             self.jumps_remaining = self.max_jumps  
             self.state = 'run'
+            self.set_animation_state('run')
         else:
             self.is_grounded = False
             if self.vy > 0:
                 self.state = 'fall'
+                self.set_animation_state('jump')
+            else:
+                self.set_animation_state('jump')
         
         if self.x < 0:
             self.x = 0
@@ -386,11 +444,18 @@ class Player:
             self.vy = 0
 
     def draw(self,app): 
-        frame = self.sprite_sheet.getFrame(0, self.current_frame)
-        orig_width, orig_height = self.sprite_sheet.getOriginalFrameSize()
-        scale_factor = 1.5
-        drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
-                 width=orig_width * scale_factor, height=orig_height * scale_factor)
+        current_sprite = self.get_current_sprite()
+        if current_sprite:
+            frame = current_sprite.getFrame(self.current_frame, 0)
+            
+            orig_width, orig_height = current_sprite.getOriginalFrameSize()
+            scale_factor = 1.5  
+            drawImage(frame, self.x + self.width/2, self.y + self.height/2, align='center',
+                     width=orig_width * 2.5, height=orig_height * 2.5)
+        else:
+            drawRect(self.x, self.y,self.width,self.height, fill='cyan')
+            eye_y = self.y + 15
+            drawCircle(self.x + self.width-10, eye_y, 4 , fill = 'red')
         if self.is_grounded:
             drawOval(self.x + self.width / 2, self.ground_y, self.width + 10, 8, fill='darkCyan', opacity=40)
 
@@ -493,6 +558,8 @@ def _finish_current_point_capture(app):
     app.calib_index += 1
 
     if app.calib_index >= len(app.calib_order):
+        app.tutorial_guide.next_step()
+        app.fenced = True
         app.state = 'demo'
     else:
         app.camera_message = 'Look at next point and press space.'
@@ -533,6 +600,8 @@ def onAppStart(app):
     app.mouse_pressed = False
 
     app.state = 'intro'
+    app.tutorial_guide = TutorialGuide()
+    app.tutorial_completed = False
     try:
         url_intro = '/Users/lisuwang/untitled folder/112Projec/assets/sounds/Future Noir.mp3'
         app.intro_sound = Sound(url_intro)
@@ -663,14 +732,22 @@ def onStep(app):
             app.survival_time = time.time() - app.game_start_time
             app.bg.update()
             app.player.update()
+            app.player.update_animation()
             if app.insideGame == 'tutorial':
                 app.tutorial.update(app.game_speed,app)
             
                 app.tutorial.check_collisions(app.player, app)
+                if app.insideGame == 'tutorial' and app.tutorial.current >= len(app.tutorial.sections):
+                    app.tutorial_completed = True
+                    app.tutorial_guide.next_step()
+                    app.state = 'menu'
+                    app.character.x, app.character.y = 830, 600
+                    app.player.hp = app.player.max_hp
             elif app.insideGame == 'smart':
                 app.smart_map.update(app.game_speed, app)
                 app.smart_map.checkCollision(app.player, app)
             if app.player.hp <= 0 and app.state == 'game':
+                app.player.trigger_death()
                 app.state = 'gameover'
                 return
             if app.Switchcooldown == 0:
@@ -731,6 +808,7 @@ def onStep(app):
                         app.player.dash(direction)
                         app.hand_dash_cooldown = 25
                 if app.vision.hand_gesture == 'PISTOL_AIM' and app.vision.hand_x != None and app.vision.hand_y != None:
+                    app.player.set_animation_state('aim')
                     start_x = app.player.x + app.player.width / 2
                     start_y = app.player.y + app.player.height / 2
                     vx = (app.vision.hand_x - app.player.x) / 20
@@ -845,6 +923,17 @@ def onKeyPress(app, key):
     elif app.state in ('demo', 'game'):
         if key in ['b', 'escape']:
             app.state = 'menu'
+            app.character.x, app.character.y = 830, 600
+            app.player.hp = app.player.max_hp
+        elif key == 'space' and app.state == 'demo':
+            app.camera_mode = 1 if app.camera_mode == 0 else 0
+        elif key == 'enter' and app.state == 'demo':
+            app.insideGame = 'tutorial'
+            app.state = 'game'
+            app.camera_mode = 1  # Default to hand mode
+            app.tutorial = TutorialLevel()
+            app.smart_map = RecursiveSmartMapGenerator(app.player)
+            app.smart_map.respawnOnPlatform(app.player)
         elif key == 'space':
             if app.state == 'game':
                 app.player.jump()
@@ -874,6 +963,8 @@ def onKeyPress(app, key):
             restart_game(app)
         elif key == 'm':
             app.state = 'menu'
+            app.player.hp = app.player.max_hp  
+            app.character.x, app.character.y = 830, 600  
             app.player.hp = app.player.max_hp  # Reset HP when going to menu
             app.character.x, app.character.y = 830, 600  # Reset character position to avoid triggering game start
 
@@ -923,6 +1014,15 @@ def onKeyHold(app, keys):
                         if not app.fenced:
                             app.msg_need_ca = 'please go to the fence to finish the lab'
                         else:
+                            if app.tutorial_completed:
+                                app.insideGame = 'smart'
+                                app.state = 'game'
+                                app.tutorial_guide.next_step()
+                                app.tutorial_guide.show_highlights = False
+                                app.smart_map = RecursiveSmartMapGenerator(app.player)
+                                app.smart_map.respawnOnPlatform(app.player)
+                            else:
+                                app.state = 'game'
                             app.state = 'game'
                     if v == app.rightest_upper_building:
                         if not app.fenced:
@@ -930,6 +1030,10 @@ def onKeyHold(app, keys):
                         else:
                             app.insideGame = 'tutorial'
                             app.state = 'game'
+                            app.camera_mode = 1  
+                            app.tutorial = TutorialLevel()
+                            app.smart_map = RecursiveSmartMapGenerator(app.player)
+                            app.smart_map.respawnOnPlatform(app.player)
 
 
                     else:
@@ -950,9 +1054,33 @@ def redrawAll(app):
         else:
             drawCircle(app.character.x, app.character.y, 10, fill='red')
         
-        if app.msg_need_ca != None:
-            drawLabel(app.msg_need_ca, app.width//2, 30, fill= 'yellow', bold = True)
+        # if app.msg_need_ca != None:
+        #     drawLabel(app.msg_need_ca, app.width//2, 30, fill= 'yellow', bold = True)
         
+        if app.tutorial_guide.show_highlights and not app.tutorial_guide.completed:
+            current_step = app.tutorial_guide.get_current_step()
+            if current_step:
+               
+                
+                if current_step['id'] == 'intro':
+                    drawRect(app.fence.left, app.fence.top, app.fence.w, app.fence.h, fill='red', opacity=40, border='red', borderWidth=3)
+                                    
+                    imageWidth, imageHeight = getImageSize('/Users/lisuwang/untitled folder/112Projec/assets/images/text1.png')
+                    drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/text1.png', app.width//2 - 300, 100,width=imageWidth*0.6, height=imageHeight*0.4)
+                    
+                elif current_step['id'] == 'calibration_complete':
+                    drawRect(app.rightest_upper_building.left, app.rightest_upper_building.top, app.rightest_upper_building.w, app.rightest_upper_building.h, fill='red', opacity=40, border='red', borderWidth=3)
+                                    
+                    imageWidth, imageHeight = getImageSize('/Users/lisuwang/untitled folder/112Projec/assets/images/text2.png')
+                    drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/text2.png', app.width//2 - 300, 100,width=imageWidth*0.6, height=imageHeight*0.4)
+                    
+                elif current_step['id'] == 'real_game' and app.tutorial_completed:
+                    drawRect(app.middle_upper_building.left, app.middle_upper_building.top, app.middle_upper_building.w, app.middle_upper_building.h, fill='red', opacity=40, border='red', borderWidth=3)
+                            
+                    imageWidth, imageHeight = getImageSize('/Users/lisuwang/untitled folder/112Projec/assets/images/text3.png')
+                    drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/text3.png', app.width//2 - 300, 100,width=imageWidth*0.6, height=imageHeight*0.4)
+                        
+                    
         #this branch written with gemini flash
         if app.rightest_bottom_building.near(app.character):
             curr_mode = "EYE" if app.camera_mode == 0 else "HAND"
@@ -961,7 +1089,9 @@ def redrawAll(app):
             drawLabel(f"Mode: {curr_mode} | Press [ SPACE ] to switch to {next_mode}", app.width // 2, 30, fill='yellow', size=15, bold=True)
     #this elif branch is debugged and rewritten with gemini flash
     elif app.state == 'calibration':
-        drawRect(0, 0, app.width, app.height, fill='aliceBlue')
+        imageWidth, imageHeight = getImageSize('/Users/lisuwang/untitled folder/112Projec/assets/images/Starfield_01-512x512.png')
+        drawImage('/Users/lisuwang/untitled folder/112Projec/assets/images/Starfield_01-512x512.png', 0,0,width=imageWidth*4, height=imageHeight*5)
+                            
         
         if app.calib_index < len(app.calib_order):
             current_target_id = app.calib_order[app.calib_index]
@@ -999,7 +1129,11 @@ def redrawAll(app):
         mode_title = "EYE-TRACKING LAB" if app.camera_mode == 0 else "HAND-GESTURE LAB"
         drawLabel(f"DEMO // {mode_title}", 40, 25, fill='cyan', size=20, bold=True, align='left')
 
-        hint_str = "Look at targets (or Mouse) to charge" if app.camera_mode == 0 else "Move hand (or Mouse) & Pinch/Click to trigger"
+        hint_str = "This is your ocular info" if app.camera_mode == 0 else "Look around"
+        drawLabel(f"Objective: {hint_str} | Press [ SPACE ] to continue | Press [ B ] Back to Town", 40, 50, fill='gray', size=13, align='left')
+        
+        drawRect(app.width//2 - 250, app.height - 100, 500, 50, fill='lime', opacity=30, border='lime', borderWidth=2)
+        drawLabel("Press [ ENTER ] to proceed to Tutorial | Press [ B ] to return to Town", app.width//2, app.height - 75, fill='lime', size=14, bold=True)
         drawLabel(f"Objective: {hint_str} | Press [ SPACE ] Switch Mode | Press [ B ] Back to Menu", 40, 50, fill='gray', size=13, align='left')
 
     
@@ -1029,6 +1163,7 @@ def redrawAll(app):
             cursor_color = 'lime' if (app.vision.hand_gesture == 'PINCH' or app.mouse_pressed) else 'magenta'
             drawCircle(hx, hy, 16, fill=cursor_color, opacity=70)
             drawCircle(hx, hy, 24, fill=None, border=cursor_color)
+            drawLabel(f"try pinch, move, fist, pistol fire/aim", 40, 150, fill='gray', size=13, align='left')
             drawLabel(f"Gesture: {app.vision.hand_gesture}", hx, hy + 35, fill=cursor_color, size=13, bold=True)
     elif app.state in ('game', 'gameover'):
         app.bg.draw(app)
@@ -1048,6 +1183,9 @@ def redrawAll(app):
 
         if app.insideGame == 'tutorial': ##remember if not
             app.tutorial.draw(app)
+            # Add B to return to town prompt
+            drawRect(app.width//2 - 150, app.height - 60, 300, 40, fill='gold', opacity=30, border='gold', borderWidth=2)
+            drawLabel("Press [ B ] to return to Town", app.width//2, app.height - 40, fill='gold', size=14, bold=True)
         elif app.insideGame == 'smart':
             app.smart_map.draw(app)
         
@@ -1084,7 +1222,7 @@ def redrawAll(app):
                 drawCircle(app.gaze_x, app.gaze_y, 20, fill=cursor_color, opacity=50)  
                 drawCircle(app.gaze_x, app.gaze_y, 8, fill='white')
             
-            drawLabel("Move eyes LEFT-RIGHT rapidly to charge, look CENTER to upgrade WEAPON", app.width/2, app.height - 30, fill='gray', size=11)
+            drawLabel("Move eyes LEFT-RIGHT rapidly to charge", app.width/2, app.height - 30, fill='gray', size=11)
         elif app.camera_mode == 1:
         #     hint_y = app.height - 120
         #     drawLabel("PINCH = JUMP", 100, hint_y, fill='lime', size=12, bold=True)
